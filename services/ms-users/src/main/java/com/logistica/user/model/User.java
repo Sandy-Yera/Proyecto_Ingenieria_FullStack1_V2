@@ -2,6 +2,8 @@ package com.logistica.user.model;
 
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -28,9 +30,14 @@ import lombok.NoArgsConstructor;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    // Aquí matamos 2 pajaros de 1 tiro
+    // Si el usuario hace un Post o Put incluye la ID, no podrá ser modificada y no
+    // lanzará error de lectura
+    // Además asegura que siempre se genere automaticamente la ID
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long id;
 
-    @NotBlank(message = "El RUT es obligatorio")
+    @NotNull(message = "El RUT es obligatorio")
     @Digits(integer = 9, fraction = 0, message = "El RUT debe tener entre 7 y 8 dígitos")
     @Column(nullable = false, unique = true)
     private Integer rut;
