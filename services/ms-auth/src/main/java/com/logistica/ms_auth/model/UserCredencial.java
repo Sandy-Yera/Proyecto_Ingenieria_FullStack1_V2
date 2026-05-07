@@ -17,17 +17,17 @@ import lombok.NoArgsConstructor;
 @Table(name = "UserCredencial")
 public class UserCredencial {
     @NotNull()
-    private Long id; //Identico a ms-user
-    
+    private Long id; // Identico a ms-user
+
     @NotBlank()
-    private String username; 
-    
+    private String username;
+
     @NotBlank()
     private String password;
-    
+
     @NotNull()
-    private Boolean is_active; //Para bloquear o desbloquear
-    
+    private Boolean is_active; // Para bloquear o desbloquear
+
     @NotNull()
     private Timestamp last_login;
 }
