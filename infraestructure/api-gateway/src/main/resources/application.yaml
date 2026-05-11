@@ -18,3 +18,6 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+# Para tener coherencia con compose.yaml. no olvidar agregar dependencia:mysql:condicion:healthy!
+# Así con todos. Esta es una nota de recordartorio

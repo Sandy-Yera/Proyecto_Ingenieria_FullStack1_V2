@@ -25,3 +25,15 @@ CREATE DATABASE IF NOT EXISTS db_service_notifications;
 
 -- Base de datos extra para métricas o logs si lo deseas
 CREATE DATABASE IF NOT EXISTS db_service_history;
+CREATE DATABASE IF NOT EXISTS db_service_logs;
+
+-- Crear un usuario único para todos los microservicios (para acelerar la integración, )
+CREATE USER IF NOT EXISTS 'app_user'@'%' IDENTIFIED BY '1234';
+GRANT ALL PRIVILEGES ON *.* TO 'app_user'@'%';
+FLUSH PRIVILEGES;
+
+/*
+Futuramente borrar y mejorar para cada microservicio, optando así por independencia y seguridad. Ejemplo:
+CREATE USER IF NOT EXISTS 'user_auth'@'%' IDENTIFIED BY 'password'; --Ojo con la contraseña
+GRANT ALL PRIVILEGES ON db_service_auth.* TO 'user_auth'@'%';
+*/

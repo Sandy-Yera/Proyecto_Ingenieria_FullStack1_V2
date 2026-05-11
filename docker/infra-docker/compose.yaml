@@ -5,14 +5,42 @@ services:
     restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=db_service_auth
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./init-db:/docker-entrypoint-initdb.d
+      - ./init-db:/docker-entrypoint-initdb.d #se deja para escalabilidad si en un futuro se agregan más .sql
     networks:
       - edificios-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Gestor de bbdd via web, para facilitar visual y funcionalidad (sin necesidad de instalar algún programa)
+  adminer:
+    image: adminer
+    container_name: brm-adminer
+    restart: always
+    ports:
+      - "8081:8080" #Para entrar debo poner mysql-db
+    networks:
+      - edificios-network
+
+
+  # Se agrega eureka server a la infraestructura
+  eureka-server:
+      build: ../../infraestructure/eureka-server # Docker lo compilará si hay un Dockerfile
+      container_name: logistica-eureka
+      ports:
+        - "8761:8761"
+      networks:
+        - edificios-network
+      environment:
+        - SPRING_PROFILES_ACTIVE=docker
+
+  # lentamente se agregarán más servicios en orden de encendido
 
 networks:
   edificios-network:
