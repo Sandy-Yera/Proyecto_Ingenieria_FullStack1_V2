@@ -13,6 +13,7 @@ CREATE DATABASE IF NOT EXISTS db_service_staff;
 CREATE DATABASE IF NOT EXISTS db_service_fleet;
 CREATE DATABASE IF NOT EXISTS db_service_schedule;
 CREATE DATABASE IF NOT EXISTS db_service_inventory;
+CREATE DATABASE IF NOT EXISTS db_service_purchases;
 
 -- IV. Operación (Órdenes de Trabajo)
 CREATE DATABASE IF NOT EXISTS db_service_workorders;
@@ -23,8 +24,7 @@ CREATE DATABASE IF NOT EXISTS db_service_payments;
 CREATE DATABASE IF NOT EXISTS db_service_billing;
 CREATE DATABASE IF NOT EXISTS db_service_notifications;
 
--- Base de datos extra para métricas o logs si lo deseas
-CREATE DATABASE IF NOT EXISTS db_service_history;
+-- Logs
 CREATE DATABASE IF NOT EXISTS db_service_logs;
 
 -- Crear un usuario único para todos los microservicios (para acelerar la integración, )

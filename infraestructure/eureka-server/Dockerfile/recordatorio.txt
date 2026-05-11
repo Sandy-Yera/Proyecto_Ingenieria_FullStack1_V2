@@ -1,1 +1,0 @@
-Debe existir un archivo llamado Dockerfile para que funcione el compose.

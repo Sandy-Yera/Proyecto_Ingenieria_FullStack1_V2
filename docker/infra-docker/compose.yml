@@ -6,7 +6,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=root
     ports:
-      - "3306:3306"
+      - "3307:3306" #el primer valor podría cambiarse para que windows lo use, pero internamente seguirá con 3306
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init-db:/docker-entrypoint-initdb.d #se deja para escalabilidad si en un futuro se agregan más .sql
@@ -29,10 +29,14 @@ services:
       - edificios-network
 
 
-  # Se agrega eureka server a la infraestructura
   eureka-server:
       build: ../../infraestructure/eureka-server # Docker lo compilará si hay un Dockerfile
       container_name: logistica-eureka
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
       ports:
         - "8761:8761"
       networks:
