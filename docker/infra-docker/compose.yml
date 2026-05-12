@@ -30,19 +30,38 @@ services:
 
 
   eureka-server:
-      build: ../../infraestructure/eureka-server # Docker lo compilará si hay un Dockerfile
-      container_name: logistica-eureka
-      healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
-      ports:
-        - "8761:8761"
-      networks:
-        - edificios-network
-      environment:
-        - SPRING_PROFILES_ACTIVE=docker
+    build: ../../infraestructure/eureka-server # Docker lo compilará si hay un Dockerfile
+    container_name: logistica-eureka
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8761:8761"
+    networks:
+      - edificios-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+  
+  api-gateway:
+    build: ../../infraestructure/api-gateway # Ruta a tu carpeta del Gateway
+    container_name: brm-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      eureka-server:
+        condition: service_healthy # Espera a que Eureka esté 100% listo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - edificios-network
 
   # lentamente se agregarán más servicios en orden de encendido
 
