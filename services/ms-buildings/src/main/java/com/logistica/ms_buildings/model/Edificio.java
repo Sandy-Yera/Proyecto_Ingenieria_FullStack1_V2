@@ -2,6 +2,7 @@ package com.logistica.ms_buildings.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -11,6 +12,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -30,24 +32,32 @@ public class Edificio {
 
     @NotBlank(message = "El nombre del edificio es obligatorio")
     @Size(max = 100)
+    @Column(nullable = false)
     private String nombre_edificio;
 
     @NotBlank(message = "La dirección es obligatoria")
+    @Column(nullable = false)
     private String direccion;
 
     @NotBlank(message = "La comuna es obligatoria")
+    @Column(nullable = false)
     private String comuna;
 
     @NotBlank(message = "El nombre del administrador es obligatorio")
+    @Column(nullable = false)
     private String nombre_administrador;
 
     @NotBlank(message = "El RUT del administrador es obligatorio")
     @Pattern(regexp = "^[0-9]+-[0-9kK]{1}$", message = "Formato de RUT inválido (ej: 12345678-9)")
+    @Column(nullable = false)
     private String rut_administrador;
 
+    @Column(nullable = true)
     private String telefono_conserjeria;
 
     @Min(value = 1, message = "El edificio debe tener al menos 1 departamento")
+    @NotNull(message = "El total de departamentos es obligatorio")
+    @Column(nullable = false)
     private Integer total_departamentos;
 
     @DecimalMin(value = "-90.0") @DecimalMax(value = "90.0")

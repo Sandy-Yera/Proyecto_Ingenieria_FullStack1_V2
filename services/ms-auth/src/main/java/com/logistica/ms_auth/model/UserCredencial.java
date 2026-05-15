@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -43,7 +44,8 @@ public class UserCredencial {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long id; // Id autogenerado
 
-    @NotBlank(message = "El username es bbligatorio")
+    @Column(unique = true, nullable = false)
+    @NotBlank(message = "El username es obligatorio")
     private String username;
 
     @NotBlank(message = "El password es obligatorio")

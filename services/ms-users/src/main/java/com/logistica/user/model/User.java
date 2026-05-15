@@ -28,6 +28,13 @@ public class User {
     telefono
     correo
     */
+
+
+    //Restriccion que quizá no se conozcan:
+    // Column(valor) <- Aquí le damos "restricciones" a la base de datos
+    // Aquí nos aseguraremos que al utilizar la base de datos en crudo no generemos filas con datos imposibles para nuestro service
+    // - nullable = false <- Nunca puede quedar vacio el dato
+    // - unique = true <- El dato debe ser unico e irrepetible, utilizado para los datos mas sensibles
     @Id
     @NotNull(message = "El ID es obligatorio")
     private Long id;
@@ -39,7 +46,7 @@ public class User {
 
     @NotBlank(message = "El dígito verificador es obligatorio")
     @Size(min = 1, max = 1, message = "El DV debe ser un solo carácter")
-    @Column(nullable = false, length = 1)
+    @Column(nullable = false, length = 1) // length <- para explicitar el largo
     private String dv;
 
     @NotBlank(message = "El primer nombre es obligatorio")
@@ -48,6 +55,7 @@ public class User {
     private String pnombre;
 
     @Size(max = 50)
+    @Column(nullable = true)
     private String snombre; // Puede ser nulo, no lleva @NotBlank
 
     @NotBlank(message = "El apellido paterno es obligatorio")
@@ -55,9 +63,8 @@ public class User {
     @Column(nullable = false)
     private String appat;
 
-    @NotBlank(message = "El apellido materno es obligatorio")
     @Size(max = 50)
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String apmat;
 
     @NotNull(message = "El teléfono no puede estar vacío")
