@@ -4,8 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(HttpStatus.CONFLICT)
-public class UserCredencialConflictException extends RuntimeException {
-    public UserCredencialConflictException(String mensaje) {
+public class EntityConflictException extends RuntimeException {
+    public EntityConflictException(String mensaje) {
         super(mensaje);
     }
 }
