@@ -4,15 +4,16 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.logistica.user.exception.user.UserNotFoundException;
 import com.logistica.user.model.User;
 import com.logistica.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
-@RequiredArgsConstructor //Comentario Temporal: RequieredArgsConstructor
+@RequiredArgsConstructor // Comentario Temporal: RequieredArgsConstructor
 public class UserService {
-    // Eliminamos la notacion "@Autowired" al utilizar 
+    // Eliminamos la notacion "@Autowired" al utilizar
     // RequiredArgsConstructor de lombok ya no será necesario
     private final UserRepository userRepository;
 
@@ -30,5 +31,19 @@ public class UserService {
 
     public User guardarUser(User user) {
         return userRepository.save(user);
+    }
+
+    public Boolean eliminarUserId(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new UserNotFoundException("No se encontró al usuario con la id: " + id);
+        }
+
+        userRepository.deleteById(id);
+        return true;
+    }
+
+    public String mensajeTotalUsuarios() {
+        Long totalUsuarios = userRepository.count();
+        return "Tenemos " + totalUsuarios + " usuarios";
     }
 }
