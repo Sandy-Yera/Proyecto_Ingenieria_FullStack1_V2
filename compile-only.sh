@@ -21,7 +21,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -it \
     -v "$MAVEN_CACHE_DIR":/root/.m2 \
     -w /app \
     maven:3.9.6-eclipse-temurin-21 \
-    sh compile-all.sh
+    sh compile-all.sh "$1"
 
 # 4. Actualización inteligente de Docker Compose
 if [ $? -eq 0 ]; then

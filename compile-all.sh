@@ -9,8 +9,6 @@ RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-printf "${GREEN}Iniciando compilación masiva de microservicios (Limpieza y Empaquetado)...${NC}\n"
-
 # Lista de rutas (Se agregan separadas por espacio)
 # Adaptado para ser compatible con el entorno Docker (sh/dash)
 SERVICES="
@@ -19,6 +17,29 @@ infraestructure/config-server
 infraestructure/api-gateway
 services/ms-auth
 "
+
+# --- DETECCIÓN DINÁMICA DE ARGUMENTOS ---
+# Si se pasa un argumento, filtramos la lista para aislar el microservicio
+if [ -n "$1" ]; then
+    MATCHED_SERVICE=""
+    for CURRENT in $SERVICES; do
+        # Compara si el argumento es igual al nombre de la carpeta o a la ruta completa
+        case "$CURRENT" in
+            *"$1"*) MATCHED_SERVICE="$CURRENT" ;;
+        esac
+    done
+
+    if [ -n "$MATCHED_SERVICE" ]; then
+        SERVICES="$MATCHED_SERVICE"
+        printf "${YELLOW}🎯 Modo aislado activo: Se compilará únicamente [ $SERVICES ]${NC}\n"
+    else
+        printf "${RED}❌ Error: El servicio '$1' no coincide con ninguna ruta válida en el proyecto.${NC}\n"
+        exit 1
+    fi
+else
+    printf "${GREEN}Iniciando compilación masiva de microservicios (Limpieza y Empaquetado)...${NC}\n"
+fi
+# ----------------------------------------
 
 for SERVICE in $SERVICES; do
     printf "${GREEN}----------------------------------------------------${NC}\n"
@@ -47,6 +68,6 @@ for SERVICE in $SERVICES; do
 done
 
 printf "${GREEN}----------------------------------------------------${NC}\n"
-printf "${GREEN}¡Todos los servicios han sido compilados con éxito!${NC}\n"
+printf "${GREEN}¡Todos los servicios requeridos han sido compilados con éxito!${NC}\n"
 printf "${GREEN}Ya puedes ejecutar: docker-compose up --build -d${NC}\n"
 printf "${GREEN}----------------------------------------------------${NC}\n"
