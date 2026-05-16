@@ -4,6 +4,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.logistica.ms_auth.model.UserCredencial;
 
-public interface UserCredencialRepository extends JpaRepository<UserCredencial, Long>{
-
+public interface UserCredencialRepository extends JpaRepository<UserCredencial, Long> {
+    public boolean existsByUsername(String username);
 }

@@ -23,14 +23,12 @@ import lombok.NoArgsConstructor;
 @Table(name = "UserCredencial")
 public class UserCredencial {
     /*
-    id_user
-    username
-    is_activa
-    last_login
-    
-    */
-
-
+     * idUser
+     * username
+     * isActiva
+     * lastLogin
+     * 
+     */
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,13 +49,13 @@ public class UserCredencial {
     @NotBlank(message = "El password es obligatorio")
     private String password;
 
-    private Boolean is_active; // Para bloquear o desbloquear
+    private Boolean isActive; // Para bloquear o desbloquear
 
-    private Timestamp last_login;
+    private Timestamp lastLogin;
 
     @PrePersist
-    protected void onCreate(){
-        this.is_active = true;
-        this.last_login = new Timestamp(System.currentTimeMillis());
+    protected void onCreate() {
+        this.isActive = true;
+        this.lastLogin = new Timestamp(System.currentTimeMillis());
     }
 }

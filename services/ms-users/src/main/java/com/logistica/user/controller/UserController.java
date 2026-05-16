@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,6 +47,12 @@ public class UserController {
         return ResponseEntity.ok(userService.existeUserRut(rut));
     }
 
+    @GetMapping("/total-usuarios")
+    public ResponseEntity<String> mensajeTotalUsuarios() {
+        String listado = userService.mensajeTotalUsuarios();
+        return ResponseEntity.ok(listado);
+    }
+
     @PostMapping()
     public ResponseEntity<User> crearUser(@Valid @RequestBody User user) {
         if (!userService.existeUserRut(user.getRut())) {
@@ -63,5 +70,11 @@ public class UserController {
             user.setId(id);
             return ResponseEntity.ok(userService.guardarUser(user));
         }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarUserId(@PathVariable Long id) {
+        userService.eliminarUserId(id);
+        return ResponseEntity.ok().build();
     }
 }
