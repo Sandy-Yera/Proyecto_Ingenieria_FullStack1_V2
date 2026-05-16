@@ -2,16 +2,19 @@ package com.logistica.user.service;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.logistica.user.model.User;
 import com.logistica.user.repository.UserRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor //Comentario Temporal: RequieredArgsConstructor
 public class UserService {
-    @Autowired
-    private UserRepository userRepository;
+    // Eliminamos la notacion "@Autowired" al utilizar 
+    // RequiredArgsConstructor de lombok ya no será necesario
+    private final UserRepository userRepository;
 
     public List<User> listaUsers() {
         return userRepository.findAll();
