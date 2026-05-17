@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.logistica.user.dto.UserRegisterDTO;
 import com.logistica.user.dto.UserResponseDTO;
 import com.logistica.user.exception.entity.*;
-import com.logistica.user.model.User;
 import com.logistica.user.service.KafkaLogProducer;
 import com.logistica.user.service.UserService;
 
@@ -84,7 +83,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarUserId(@PathVariable Long id) {
+    public ResponseEntity<Void> eliminarUserId(@RequestParam Long id) {
         userService.eliminarUserId(id);
         return ResponseEntity.ok().build();
     }
