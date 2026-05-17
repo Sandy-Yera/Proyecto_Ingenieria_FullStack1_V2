@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.logistica.ms_auth.dto.UserResponseDTO;
+import com.logistica.ms_auth.dto.AuthUserResponseDTO;
 import com.logistica.ms_auth.dto.UserRegisterDTO;
 
 @FeignClient(name = "ms-users", path = "/api/users") // Nombre exacto en Eureka
@@ -21,7 +21,7 @@ public interface UserClient {
     // Aquí enviaremos el DTO para registrar al usuario en el microservicio de
     // usuarios
     @PostMapping()
-    ResponseEntity<UserResponseDTO> registrarUser(@RequestBody UserRegisterDTO userRegisterDTO);
+    ResponseEntity<AuthUserResponseDTO> registrarUser(@RequestBody UserRegisterDTO userRegisterDTO);
 
     @DeleteMapping("/{id}")
     ResponseEntity<Void> eliminarUserId(@RequestParam Long id);

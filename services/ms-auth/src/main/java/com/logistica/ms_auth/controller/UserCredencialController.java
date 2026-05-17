@@ -65,8 +65,6 @@ public class UserCredencialController {
     // }
 
     @GetMapping("/existe/{id}")
-    // Cambiamos de PathVariable a RequestParam, esto facilitará la conexion con
-    // OpenFeign
     public ResponseEntity<Boolean> existeUser(
             // Asignamos el parametro "required" para que no obligue a usar ambos parametros
             // en la URL

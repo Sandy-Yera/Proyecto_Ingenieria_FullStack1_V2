@@ -6,7 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.logistica.ms_auth.client.UserClient;
-import com.logistica.ms_auth.dto.UserResponseDTO;
+import com.logistica.ms_auth.dto.AuthUserResponseDTO;
 import com.logistica.ms_auth.dto.RegistroCompletoDTO;
 import com.logistica.ms_auth.dto.UserCredencialRegisterDTO;
 import com.logistica.ms_auth.dto.UserCredencialResponseDTO;
@@ -122,7 +122,7 @@ public class UserCredencialService {
         userRegisterDTO.setCorreo(dtoCompleto.getCorreo());
 
         // 2. Enviamos el JSON a ms-users vía OpenFeign
-        UserResponseDTO userResponseDTO = userClient.registrarUser(userRegisterDTO).getBody();
+        AuthUserResponseDTO userResponseDTO = userClient.registrarUser(userRegisterDTO).getBody();
 
         if (userResponseDTO == null || userResponseDTO.getId() == null) {
             logProducer.sendLog("ERROR",

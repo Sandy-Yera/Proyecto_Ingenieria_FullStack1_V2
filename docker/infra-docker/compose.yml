@@ -183,6 +183,27 @@ services:
       - edificios-network
     restart: on-failure
 
+  ms-users:
+    build: ../../services/ms-users
+    container_name: brm-ms-users
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - edificios-network
+    restart: on-failure
+
 networks:
   edificios-network:
     driver: bridge
