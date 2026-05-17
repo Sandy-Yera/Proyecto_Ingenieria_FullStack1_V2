@@ -14,7 +14,7 @@ spring:
 
   # Configuración del Consumidor de Kafka
   kafka:
-    bootstrap-servers: brm-kafka:9092
+    bootstrap-servers: kafka:29092
     consumer:
       group-id: logs-group
       auto-offset-reset: earliest
