@@ -1,4 +1,4 @@
-package com.logistica.user.dto;
+package com.logistica.ms_auth.dto;
 
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Email;
