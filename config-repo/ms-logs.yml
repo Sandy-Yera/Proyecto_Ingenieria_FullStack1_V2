@@ -1,0 +1,30 @@
+server:
+  port: 8082
+
+spring:
+  # Configuración de la Base de Datos para guardar los registros
+  datasource:
+    url: jdbc:mysql://logistica-mysql:3306/db_service_logs?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: app_user
+    password: "1234"
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  # Configuración del Consumidor de Kafka
+  kafka:
+    bootstrap-servers: brm-kafka:9092
+    consumer:
+      group-id: logs-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+# Registro en Eureka
+eureka:
+  client:
+    service-url:
+      defaultZone: http://logistica-eureka:8761/eureka/
+  instance:
+    prefer-ip-address: true

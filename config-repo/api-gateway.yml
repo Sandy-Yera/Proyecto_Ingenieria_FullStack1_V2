@@ -8,13 +8,13 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true # Recomendado para evitar errores de mayúsculas en las URLs
-      
+
       # MEJORA: Filtro GLOBAL para todos los servicios (Genera un ID único por petición)
       default-filters:
         - AddRequestHeader=X-Trace-Id, ${random.uuid}
 
       routes:
-      # 1. Seguridad y Autenticación (Prioridad 1 para el Login)
+        # 1. Seguridad y Autenticación (Prioridad 1 para el Login)
         - id: ms-auth
           uri: lb://ms-auth
           predicates:
@@ -26,7 +26,7 @@ spring:
         #  uri: lb://ms-users
         #  predicates:
         #    - Path=/api/users/**
-        
+
         # --- SECCIÓN POR INTEGRAR (Comentados para evitar errores de 503 hasta que existan) ---
         # Solo debes quitar el '#' cuando el microservicio esté en ejecución en Docker
 
@@ -49,10 +49,10 @@ spring:
         #    - Path=/api/workorders/**
 
         # 6. Auditoría de Trazabilidad (Función Especial)
-        #- id: service-logs
-        #  uri: lb://service-logs
-        #  predicates:
-        #    - Path=/api/logs/**
+        - id: ms-logs
+          uri: lb://ms-logs
+          predicates:
+            - Path=/api/logs/**
 
 # Configuración de Cliente Eureka (Centralizada)
 eureka:

@@ -16,6 +16,7 @@ infraestructure/eureka-server
 infraestructure/config-server 
 infraestructure/api-gateway
 services/ms-auth
+services/ms-logs
 "
 
 # --- DETECCIÓN DINÁMICA DE ARGUMENTOS ---
