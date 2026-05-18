@@ -1,11 +1,12 @@
 server:
-  port: ${PORT:8081}
+  port: ${PORT:8087}
 
 spring:
   datasource:
-    url: jdbc:mysql://mysql-db:3306/db_service_auth?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://mysql-db:3306/db_service_security?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: app_user
     password: "1234"
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update
@@ -13,18 +14,12 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
+
+  # Mensajería específica para reportar bloqueos o auditoría de tokens JWT
   kafka:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
-      retries: 3
-      properties:
-        retry.backoff.ms: 1000
-        max.block.ms: 5000
-
-eureka:
-  instance:
-    prefer-ip-address: true
 
 management:
   endpoints:
@@ -35,12 +30,11 @@ management:
     health:
       show-details: always
 
-# UNIFICADO: Una sola declaración de logging para todo el archivo
+# Telemetría avanzada unificada exclusiva para auditorías de seguridad relacionales
 logging:
   level:
     root: INFO
-    com.logistica.ms_auth: DEBUG
-    com.logistica: DEBUG
+    com.logistica: DEBUG  # Indispensable para validar la expiración de tokens o accesos denegados
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.hibernate.orm.results.graph.AST: TRACE

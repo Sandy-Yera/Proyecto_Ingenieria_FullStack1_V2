@@ -1,10 +1,10 @@
 server:
-  port: ${PORT:8086}
+  port: ${PORT:8089}
 
 spring:
   datasource:
-    # CORREGIDO: Se elimina el doble '??' para asegurar una conexión JDBC limpia hacia el esquema de flotas
-    url: jdbc:mysql://mysql-db:3306/db_service_fleet?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    # Conectado a la base de datos unificada en su esquema de inventario
+    url: jdbc:mysql://mysql-db:3306/db_service_inventory?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: app_user
     password: "1234"
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -16,23 +16,21 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
-  # Componentes nativos del consumidor y productor para el rastreo de vehículos
+  # Parámetros específicos del flujo de mensajería de Inventario
   kafka:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
     consumer:
-      group-id: fleet-group
+      group-id: inventory-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-
-# Toda la configuración de Eureka e IP distribuidas se hereda transparentemente del global
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health, info
   endpoint:
     health:
       show-details: always
@@ -40,8 +38,7 @@ management:
 # Telemetría avanzada unificada exclusiva para este módulo relacional
 logging:
   level:
-    root: INFO
-    com.logistica: DEBUG  # <-- Esencial para ver la lógica de negocio y geolocalización de tus flotas
+    com.logistica: DEBUG  # <-- Crucial para ver tus controladores e inventario
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.hibernate.orm.results.graph.AST: TRACE
