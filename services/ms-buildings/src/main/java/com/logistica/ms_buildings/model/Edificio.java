@@ -33,7 +33,7 @@ public class Edificio {
     @NotBlank(message = "El nombre del edificio es obligatorio")
     @Size(max = 100)
     @Column(nullable = false)
-    private String nombre_edificio;
+    private String nombreEdificio;
 
     @NotBlank(message = "La dirección es obligatoria")
     @Column(nullable = false)
@@ -45,24 +45,29 @@ public class Edificio {
 
     @NotBlank(message = "El nombre del administrador es obligatorio")
     @Column(nullable = false)
-    private String nombre_administrador;
+    private String nombreAdministrador;
 
     @NotBlank(message = "El RUT del administrador es obligatorio")
     @Pattern(regexp = "^[0-9]+-[0-9kK]{1}$", message = "Formato de RUT inválido (ej: 12345678-9)")
     @Column(nullable = false)
-    private String rut_administrador;
+    private String rutAdministrador;
 
-    @Column(nullable = true)
-    private String telefono_conserjeria;
+    @Column(nullable = false)
+    @NotNull(message = "El telefono es obligatorio")
+    private String telefonoConserjeria;
 
     @Min(value = 1, message = "El edificio debe tener al menos 1 departamento")
     @NotNull(message = "El total de departamentos es obligatorio")
     @Column(nullable = false)
-    private Integer total_departamentos;
+    private Integer totalDepartamentos;
 
     @DecimalMin(value = "-90.0") @DecimalMax(value = "90.0")
+    @NotNull(message = "La latitud es obligatoria")
+    @Column(nullable = false)
     private Double latitud;
 
     @DecimalMin(value = "-180.0") @DecimalMax(value = "180.0")
+    @NotNull(message = "La longitud es obligatoria")
+    @Column(nullable = false)
     private Double longitud;
 }
