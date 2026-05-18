@@ -48,13 +48,13 @@ public class EdificioController {
     @PutMapping("/{id}")
     public ResponseEntity<Edificio> actualizarEdificio(
             @Valid @RequestBody Edificio datosActualizados,
-            @RequestParam Long id) { 
+            @PathVariable Long id) { 
         return ResponseEntity.ok(edificioService.actualizarEdificio(id, datosActualizados));
     }
         
     // ELIMINAR
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarEdificio(@RequestParam Long id) {
+    public ResponseEntity<Void> eliminarEdificio(@PathVariable Long id) {
         edificioService.eliminarEdificio(id);
         return ResponseEntity.noContent().build();
     }

@@ -47,13 +47,13 @@ public class CotizacionController {
     @PutMapping("/{id}")
     public ResponseEntity<Cotizacion> actualizarCotizacion(
             @Valid @RequestBody Cotizacion datosActualizados,
-            @RequestParam Long id) {
+            @PathVariable Long id) {
         return ResponseEntity.ok(cotizacionService.actualizarCotizacion(id, datosActualizados));
     }
 
     // ELIMINAR
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarCotizacion(@RequestParam Long id) {
+    public ResponseEntity<Void> eliminarCotizacion(@PathVariable Long id) {
         cotizacionService.eliminarCotizacion(id);
         return ResponseEntity.noContent().build();
     }

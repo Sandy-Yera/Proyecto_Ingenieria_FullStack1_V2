@@ -50,14 +50,14 @@ public class RoleController {
     @PutMapping("/{id}")
     public ResponseEntity<Role> actualizarRole(
     @Valid @RequestBody Role datosActualizados,
-    @RequestParam Long id) { 
+    @PathVariable Long id) { 
         return ResponseEntity.ok(roleService.actualizarRole(id, datosActualizados));
     }
         
     
     // ELIMINAR
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarRole(@RequestParam Long id) {
+    public ResponseEntity<Void> eliminarRole(@PathVariable Long id) {
         roleService.eliminarRole(id);
         return ResponseEntity.noContent().build();
     }

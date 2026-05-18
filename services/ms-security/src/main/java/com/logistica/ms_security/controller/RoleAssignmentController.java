@@ -51,13 +51,13 @@ public class RoleAssignmentController {
     @PutMapping("/{id}")
     public ResponseEntity<RoleAssignment> actualizarRoleAssignment(
             @Valid @RequestBody RoleAssignment datosActualizados,
-            @RequestParam Long id) { 
+            @PathVariable Long id) { 
         return ResponseEntity.ok(roleAssignmentService.actualizarRoleAssignment(id, datosActualizados));
     }
 
     // ELIMINAR
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarRoleAssignment(@RequestParam Long id) {
+    public ResponseEntity<Void> eliminarRoleAssignment(@PathVariable Long id) {
         roleAssignmentService.eliminarRoleAssignment(id);
         return ResponseEntity.noContent().build();
     }
