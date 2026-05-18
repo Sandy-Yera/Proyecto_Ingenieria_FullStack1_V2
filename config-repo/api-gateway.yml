@@ -7,54 +7,54 @@ spring:
       discovery:
         locator:
           enabled: true
-          lower-case-service-id: true # Recomendado para evitar errores de mayúsculas en las URLs
+          lower-case-service-id: true # Evita conflictos si Eureka registra en mayúsculas o minúsculas
 
-      # MEJORA: Filtro GLOBAL para todos los servicios (Genera un ID único por petición)
+      # Filtro GLOBAL: Inyecta el Trace ID único para la auditoría asíncrona con ms-logs
+      # ALERTA ARQUITECTÓNICA: Usar '${random.uuid}' aquí inyecta un ID estático generado al arrancar el Gateway.
+      # Para sistemas distribuidos reales bajo Spring Cloud Gateway (WebFlux), se recomienda encarecidamente
+      # implementar un 'GlobalFilter' en código Java (ms-gateway) que genere un UUID dinámico por cada 'ServerWebExchange',
+      # o utilizar Spring Cloud Sleuth / Micrometer Tracing para propagar el "traceId" de forma nativa por HTTP y Kafka.
       default-filters:
         - AddRequestHeader=X-Trace-Id, ${random.uuid}
 
       routes:
-        # 1. Seguridad y Autenticación (Prioridad 1 para el Login)
+        # 1. Núcleo de Autenticación y Credenciales
         - id: ms-auth
           uri: lb://ms-auth
           predicates:
             - Path=/api/auth/**
 
-        # RUTA PARA USUARIOS (Activa)
-        # Gestión de perfiles
+        # 2. Gestión de Perfiles de Usuarios
         - id: ms-users
           uri: lb://ms-users
           predicates:
             - Path=/api/users/**
 
-        # --- SECCIÓN POR INTEGRAR (Comentados para evitar errores de 503 hasta que existan) ---
-        # Solo debes quitar el '#' cuando el microservicio esté en ejecución en Docker
-
-        # 3. Cerebro de Permisos (RBAC)
-        #- id: service-security
-        #  uri: lb://service-security
+        # 3. Tu Nuevo Microservicio: Motor de Seguridad y Permisos (RBAC)
+        # NOTA: Descomentar únicamente cuando compiles e integres ms-security a la red
+        #- id: ms-security
+        #  uri: lb://ms-security
         #  predicates:
         #    - Path=/api/security/**
 
-        # 4. Orquestador de Mapas y Geofencing
-        #- id: ms-logistics
-        #  uri: lb://ms-logistics
-        #  predicates:
-        #    - Path=/api/logistics/**
-
-        # 5. Gestión de Reparaciones (Core)
-        #- id: ms-workorders
-        #  uri: lb://ms-workorders
-        #  predicates:
-        #    - Path=/api/workorders/**
-
-        # 6. Auditoría de Trazabilidad (Función Especial)
+        # 4. Auditoría y Trazabilidad de Logs Centralizados
         - id: ms-logs
           uri: lb://ms-logs
           predicates:
             - Path=/api/logs/**
 
-# Configuración de Cliente Eureka (Centralizada)
+        # --- EXTENSIONES OPERATIVAS FUTURAS (Mapeadas según informe técnico) ---
+        #- id: ms-logistics
+        #  uri: lb://ms-logistics
+        #  predicates:
+        #    - Path=/api/logistics/**
+
+        #- id: ms-workorders
+        #  uri: lb://ms-workorders
+        #  predicates:
+        #    - Path=/api/workorders/**
+
+# Configuración de Cliente Eureka (Acoplada a la red interna de Docker)
 eureka:
   client:
     service-url:
@@ -62,10 +62,10 @@ eureka:
     fetch-registry: true
     register-with-eureka: true
   instance:
-    prefer-ip-address: true # Recomendado en Docker para evitar problemas de resolución de nombres
+    prefer-ip-address: true
     hostname: api-gateway
 
-# Actuator: Configuración para el monitoreo y healthcheck de Docker
+# Monitoreo Actuator para verificación de mallas distribuidas
 management:
   endpoints:
     web:
@@ -75,4 +75,4 @@ management:
     health:
       show-details: always
     gateway:
-      enabled: true # Permite ver las rutas activas vía Actuator
+      enabled: true # Habilita la inspección de rutas activas vía /actuator/gateway/routes

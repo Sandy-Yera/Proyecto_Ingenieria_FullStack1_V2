@@ -1,217 +1,121 @@
 package com.logistica.ms_auth.service;
 
 import java.util.List;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.logistica.ms_auth.client.UserClient;
-import com.logistica.ms_auth.dto.AuthUserResponseDTO;
-import com.logistica.ms_auth.dto.RegistroCompletoDTO;
 import com.logistica.ms_auth.dto.UserCredencialRegisterDTO;
 import com.logistica.ms_auth.dto.UserCredencialResponseDTO;
-import com.logistica.ms_auth.dto.UserRegisterDTO;
 import com.logistica.ms_auth.exception.entity.*;
 import com.logistica.ms_auth.model.UserCredencial;
 import com.logistica.ms_auth.repository.UserCredencialRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
-
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class UserCredencialService {
+
     private final UserCredencialRepository userCredencialRepository;
     private final PasswordEncoder passwordEncoder;
-    private final KafkaLogProducer logProducer; // Inyección limpia del productor de logs vía Lombok
-    private final HttpServletRequest request; // Para capturar el Trace Id
-    private final UserClient userClient; // Aquí va la conexión con el cliente
+    private final KafkaLogProducer logProducer; 
+    private final HttpServletRequest request; 
 
-    public void registrarCredenciales(Long id, String username, String password) {
+    /**
+     * Registra las credenciales de un usuario de forma directa y segura.
+     * Este método es invocado de forma síncrona por ms-users una vez que 
+     * el perfil de negocio ha sido persistido con éxito.
+     */
+    @Transactional
+    public UserCredencialResponseDTO crearUserCredencial(UserCredencialRegisterDTO dto) {
+        // Extraemos el Trace Id desde el Header real inyectado por el API Gateway
+        String traceId = request.getHeader("X-Trace-Id");
 
+        if (userCredencialRepository.existsByUsername(dto.getUsername())) {
+            logProducer.sendLog("WARN", "Conflicto de seguridad. El Username ya existe: " + dto.getUsername() + " | TraceId: " + traceId);
+            throw new EntityConflictException("El email o username ya se encuentra registrado en el módulo de autenticación.");
+        }
+
+        // Construcción de la entidad de seguridad acoplada al ID original
+        UserCredencial userCredencial = new UserCredencial();
+        userCredencial.setId(dto.getId()); // ID autogenerado proveniente de ms-users
+        userCredencial.setUsername(dto.getUsername());
+        userCredencial.setPassword(passwordEncoder.encode(dto.getPassword()));
+        userCredencial.setIsActive(true);
+
+        UserCredencial guardado = userCredencialRepository.save(userCredencial);
+
+        logProducer.sendLog("INFO", "Credenciales asignadas correctamente al ID: " + guardado.getId() + " | TraceId: " + traceId);
+
+        return convertirAResponseDTO(guardado);
     }
 
-    /*
-     * CRUD
-     * - LISTAR
-     * - ACTUALIZAR
-     * - ELIMINAR
-     */
-
-    // --- LISTAR --- READ
     @Transactional(readOnly = true)
     public List<UserCredencialResponseDTO> listar() {
-        return userCredencialRepository.findAll() // Esto es lo que siempre hemos tenido de toda la vida;
-                .stream() // Abre un flujo de datos
-                .map(this::convertirAResponseDTO) // Transformamos cada entidad en un DTO
-                .toList(); // Agrupa todo en una lista
+        return userCredencialRepository.findAll()
+                .stream()
+                .map(this::convertirAResponseDTO)
+                .toList();
     }
 
-    // Existe un UserCredencial por id
     public Boolean existeUserCredencialId(Long id) {
         return userCredencialRepository.existsById(id);
     }
 
-    // Existe un UserCredencial por Username
     public Boolean existeUserCredencialUsername(String username) {
         return userCredencialRepository.existsByUsername(username);
     }
 
-    // Encontrar un User Por su ID
     @Transactional(readOnly = true)
     public UserCredencialResponseDTO encontrarUserCredencialId(Long id) {
+        String traceId = request.getHeader("X-Trace-Id");
         return convertirAResponseDTO(userCredencialRepository.findById(id)
                 .orElseThrow(() -> {
-                    logProducer.sendLog("WARN", "Intento fallido de buscar usuario inexistente con ID: " + id);
-                    return new EntityNotFoundException("No se encontró al usuario con la id: " + id);
+                    logProducer.sendLog("WARN", "Búsqueda fallida de credencial inexistente con ID: " + id + " | TraceId: " + traceId);
+                    return new EntityNotFoundException("No se encontraron credenciales para el identificador proporcionado.");
                 }));
-    }
-
-    // --- ACTUALIZAR y CREAR ---
-    // Comentario Temporal
-    // Utilizamos save() del JpaRepository para guardar y actualizar el model
-    // Ya no le pedimos que nos retorne un "UserCredencial" ahora es el DTO Response
-    // Ya no le pedimos que nos dé un "userCredencial" ahora nos pedirá el DTO
-    // Register
-    @Transactional
-    public UserCredencialResponseDTO crearUserCredencial(UserCredencialRegisterDTO dto) {
-        if (userCredencialRepository.existsByUsername(dto.getUsername())) {
-            logProducer.sendLog("WARN", "Conflicto al crear usuario. El Username ya existe: " + dto.getUsername());
-            throw new EntityConflictException("Ya existe el Username: " + dto.getUsername());
-        }
-
-        // Generaremos el Objeto con los datos del dto
-        UserCredencial userCredencial = new UserCredencial();
-        userCredencial.setId(dto.getId()); // <-- IMPORTANTE: Recibimos el ID generado por ms-users
-        userCredencial.setUsername(dto.getUsername());
-        userCredencial.setPassword(passwordEncoder.encode(dto.getPassword()));
-
-        UserCredencial guardado = userCredencialRepository.save(userCredencial);
-
-        logProducer.sendLog("INFO", "Usuario creado exitosamente con Username: " + guardado.getUsername());
-
-        // Guardamos el DTO en la base de datos
-        return convertirAResponseDTO(guardado);
-    }
-
-    // CREAR UN USUARIO EN EL ECOSISTEMA COMPLETO
-    // Metodo orquestador
-    // El método orquestador utiliza un mapeo simple manual para transferir los
-    // datos del formulario completo (UserCredencialRegisterDTO) hacia el DTO que
-    // procesa la red (UserRegisterDTO):
-
-    // 1.- Pediremos el registro completo
-    // 2.- Lo dividiremos y lo enviaremos a ms-users, si la respuesta es ok seguimos
-    // con el siguiente paso
-    // 3.- Le diremos a Auth que tome el ID autogenerado de ms-users para crear al
-    // ms-auth
-    // 4.- y listo
-    public UserCredencialResponseDTO crearUsuarioCompleto(RegistroCompletoDTO dtoCompleto) {
-        String traceId = (String) request.getAttribute("trace-id"); // Capturamos la trazabilidad de Gateway
-
-        UserRegisterDTO userRegisterDTO = new UserRegisterDTO();
-        userRegisterDTO.setRut(dtoCompleto.getRut());
-        userRegisterDTO.setDv(dtoCompleto.getDv());
-        userRegisterDTO.setPNombre(dtoCompleto.getPNombre());
-        userRegisterDTO.setSNombre(dtoCompleto.getSNombre());
-        userRegisterDTO.setApPat(dtoCompleto.getApPat());
-        userRegisterDTO.setApMat(dtoCompleto.getApMat());
-        userRegisterDTO.setTelefono(dtoCompleto.getTelefono());
-        userRegisterDTO.setCorreo(dtoCompleto.getCorreo());
-
-        // 2. Enviamos el JSON a ms-users vía OpenFeign
-        AuthUserResponseDTO userResponseDTO = userClient.registrarUser(userRegisterDTO).getBody();
-
-        if (userResponseDTO == null || userResponseDTO.getId() == null) {
-            logProducer.sendLog("ERROR",
-                    "Fallo al registrar usuario en ms-users. Respuesta nula o sin ID. TraceId: " + traceId);
-            throw new EntityCreationException("Error al crear el usuario en el sistema de usuarios.");
-        }
-
-        // Capturamos el ID generado por ms-users para usarlo en ms-auth
-        Long generatedUserId = userResponseDTO.getId();
-
-        // 3. Orquestación con Plan de Respaldo para evitar datos huérfanos
-        try {
-            // Creamos el DTO de credenciales local incluyendo el ID generado remotamente
-            UserCredencialRegisterDTO credencialDTO = new UserCredencialRegisterDTO();
-            credencialDTO.setId(generatedUserId); // <-- CRUCIAL: Vinculamos el ID de ms-users
-            credencialDTO.setUsername(dtoCompleto.getUsername());
-            credencialDTO.setPassword(dtoCompleto.getPassword());
-
-            // Este método interno SÍ debe llevar @Transactional (ya que solo impacta la
-            // base de datos de ms-auth)
-            return crearUserCredencial(credencialDTO);
-
-        } catch (Exception e) {
-            // PLAN DE RESPALDO (Acción Compensatoria):
-            // Si ms-auth se cae, explota la BD o el username está duplicado localmente,
-            // borramos de inmediato el usuario que alcanzamos a registrar en ms-users.
-            try {
-                userClient.eliminarUserId(generatedUserId);
-                logProducer.sendLog("WARN", "Compensación ejecutada: Registro limpio en ms-users para ID: "
-                        + generatedUserId + ". TraceId: " + traceId);
-            } catch (Exception ex) {
-                logProducer.sendLog("FATAL", "CRÍTICO: Falló la compensación. ID " + generatedUserId
-                        + " quedó huérfano en ms-users. Detalle: " + ex.getMessage());
-            }
-
-            // Redirigimos la excepción original de negocio
-            throw new EntityConflictException(
-                    "Error interno al procesar las credenciales de seguridad. El registro total fue cancelado.");
-        }
     }
 
     @Transactional
     public UserCredencialResponseDTO actualizarUserCredencial(Long id, UserCredencialRegisterDTO dto) {
-        // Verificamos que el usuario a actualizar exista realmente
+        String traceId = request.getHeader("X-Trace-Id");
+        
         UserCredencial usuarioExistente = userCredencialRepository.findById(id)
                 .orElseThrow(() -> {
-                    logProducer.sendLog("WARN", "Intento fallido de actualizar usuario inexistente con ID: " + id);
-                    return new EntityNotFoundException("No se encontró al usuario con la id: " + id);
+                    logProducer.sendLog("WARN", "Intento fallido de actualizar credencial inexistente con ID: " + id + " | TraceId: " + traceId);
+                    return new EntityNotFoundException("No se puede actualizar. El usuario no existe.");
                 });
 
-        // 2. Validación de Username duplicado por OTRO usuario:
-        // Si cambió su username, verificamos que el nuevo no esté tomado por alguien
-        // más
         if (!usuarioExistente.getUsername().equals(dto.getUsername()) &&
                 userCredencialRepository.existsByUsername(dto.getUsername())) {
-            logProducer.sendLog("WARN",
-                    "Conflicto al actualizar ID " + id + ". El Username '" + dto.getUsername() + "' ya está ocupado.");
-            throw new EntityConflictException(
-                    "El Username '" + dto.getUsername() + "' ya está en uso por otro usuario.");
+            logProducer.sendLog("WARN", "Conflicto al actualizar ID " + id + ". El Username '" + dto.getUsername() + "' ya está ocupado. | TraceId: " + traceId);
+            throw new EntityConflictException("El nuevo Username ya está en uso por otra entidad.");
         }
 
-        // 3. Seteamos los cambios seguros
         usuarioExistente.setUsername(dto.getUsername());
         usuarioExistente.setPassword(passwordEncoder.encode(dto.getPassword()));
         if (dto.getIsActive() != null) {
             usuarioExistente.setIsActive(dto.getIsActive());
         }
 
-        logProducer.sendLog("INFO", "Usuario con ID " + id + " actualizado exitosamente.");
-
-        // Al estar utilizando "@Transactional" no necesitamos usar el metodo save del
-        // repository
+        logProducer.sendLog("INFO", "Credenciales del ID " + id + " actualizadas con éxito. | TraceId: " + traceId);
         return convertirAResponseDTO(usuarioExistente);
     }
 
-    // --- Eliminar ---
-    @Transactional(readOnly = true)
+    @Transactional
     public void eliminarUserCredencial(Long id) {
+        String traceId = request.getHeader("X-Trace-Id");
         if (!userCredencialRepository.existsById(id)) {
-            logProducer.sendLog("WARN", "Intento fallido de eliminar usuario inexistente con ID: " + id);
-            throw new EntityNotFoundException("No se encontró al usuario con la id: " + id);
+            logProducer.sendLog("WARN", "Intento fallido de eliminar credencial inexistente con ID: " + id + " | TraceId: " + traceId);
+            throw new EntityNotFoundException("No se encontró el registro de autenticación a eliminar.");
         }
 
         userCredencialRepository.deleteById(id);
-        logProducer.sendLog("INFO", "Usuario con ID " + id + " fue eliminado del sistema.");
+        logProducer.sendLog("INFO", "Credenciales del ID " + id + " eliminadas de la base de datos de seguridad. | TraceId: " + traceId);
     }
 
-    // ---- codigo muy importante y necesario para poder transformar una objeto
-    // UserCredencial a ResponseDTO
     public UserCredencialResponseDTO convertirAResponseDTO(UserCredencial userCredencial) {
         UserCredencialResponseDTO response = new UserCredencialResponseDTO();
         response.setId(userCredencial.getId());

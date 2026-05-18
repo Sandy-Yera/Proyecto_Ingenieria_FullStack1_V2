@@ -1,10 +1,12 @@
 package com.logistica.ms_auth.exception.entity;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
-@ResponseStatus(HttpStatus.CONFLICT)
+/**
+ * EXCEPCIÓN DE NEGOCIO: CONFLICTO (409)
+ * OPTIMIZACIÓN: Se remueve la anotación @ResponseStatus para unificar la captura
+ * centralizada en el GlobalExceptionHandler de ms-auth. Código limpio y desacoplado.
+ */
 public class EntityConflictException extends RuntimeException {
+    
     public EntityConflictException(String mensaje) {
         super(mensaje);
     }

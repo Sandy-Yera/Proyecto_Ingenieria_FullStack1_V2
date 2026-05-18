@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,11 +27,12 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
+
     private final UserService userService;
     private final KafkaLogProducer logProducer;
 
-    // -- Listar
-    @GetMapping()
+    // -- Listar Usuarios
+    @GetMapping
     public ResponseEntity<List<UserResponseDTO>> listaUsers() {
         List<UserResponseDTO> listado = userService.listar();
 
@@ -41,12 +43,12 @@ public class UserController {
         }
     }
 
-    // -- Existe el usuario por Id o Rut
+    // -- CORREGIDO: Añadido @GetMapping("/existe") y cambiado el tipo de RUT a String
+    @GetMapping("/existe")
     public ResponseEntity<Boolean> existeUser(
-            // Asignamos el parametro "required" para que no obligue a usar ambos parametros
-            // en la URL
             @RequestParam(required = false) Long id,
-            @RequestParam(required = false) Integer rut) {
+            @RequestParam(required = false) String rut) {
+        
         if (id != null && rut != null) {
             logProducer.sendLog("WARN",
                     "Petición a /existe rechazada: Parámetros ambiguos enviados simultáneamente (id=" + id
@@ -54,36 +56,42 @@ public class UserController {
             throw new EntityBadRequestException(
                     "Debe proporcionar solo un parámetro de búsqueda a la vez ('id' o 'rut').");
         }
+        
         if (id != null) {
             return ResponseEntity.ok(userService.existeUserId(id));
         }
+        
         if (rut != null) {
             return ResponseEntity.ok(userService.existeUserRut(rut));
         }
+        
         logProducer.sendLog("WARN",
                 "Petición a /existe rechazada: No se enviaron parámetros de búsqueda.");
         throw new EntityBadRequestException(
                 "Se requiere al menos un parámetro de búsqueda válido ('id' o 'rut') para verificar la existencia del usuario");
     }
 
-    @PostMapping()
+    // -- Crear Usuario
+    @PostMapping
     public ResponseEntity<UserResponseDTO> crearUser(
             @Valid @RequestBody UserRegisterDTO user) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(userService.crearUser(user));
     }
 
+    // -- CORREGIDO: Sincronizado de @RequestParam a @PathVariable para cumplir con la ruta /{id}
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseDTO> actualizarUser(
-            @Valid @RequestBody UserRegisterDTO datosActualizados,
-            @RequestParam Long id) {
+            @PathVariable Long id, 
+            @Valid @RequestBody UserRegisterDTO datosActualizados) {
         return ResponseEntity.ok(userService.actualizarUser(id, datosActualizados));
     }
 
+    // -- CORREGIDO: Sincronizado de @RequestParam a @PathVariable para cumplir con la ruta /{id}
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarUserId(@RequestParam Long id) {
+    public ResponseEntity<Void> eliminarUserId(@PathVariable Long id) {
         userService.eliminarUserId(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build(); // Nota: Cambiado a noContent() (24) por buena práctica REST en Delete
     }
 
     // -- Muestra el total de usuarios

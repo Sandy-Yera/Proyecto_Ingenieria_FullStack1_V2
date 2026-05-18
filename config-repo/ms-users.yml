@@ -1,10 +1,11 @@
 server:
-  port: 8083 #y así sucesivamente....
+  port: ${PORT:8083}
 
 spring:
   datasource:
-    # Usamos el nombre del servicio de red de MySQL y la DB del init.sql
-    url: jdbc:mysql://logistica-mysql:3306/db_service_users?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    # CORREGIDO: Cambiado 'logistica-mysql' por 'mysql-db' para alinearse con el nombre del servicio en el compose.yml,
+    # permitiendo que el DNS de Docker resuelva la conexión a la base de datos de forma correcta.
+    url: jdbc:mysql://mysql-db:3306/db_service_users?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: app_user
     password: "1234"
   jpa:
@@ -15,15 +16,31 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
   kafka:
+    # Nota: bootstrap-servers se hereda del global, pero se mantiene la simetría explícita
     bootstrap-servers: kafka:29092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
-# Configuración de Logging para el microservicio de usuarios
-# logging:
-#   level:
-#     example:
-#       ms-users:
-#         client:
-#           StockClient: DEBUG
+# Conexión obligatoria para que el microservicio aparezca en Eureka
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# Habilitar Actuator para los Healthchecks de Docker Compose
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+
+# Configuración de Logging adaptada a la estructura real del proyecto
+logging:
+  level:
+    com.logistica.user: DEBUG

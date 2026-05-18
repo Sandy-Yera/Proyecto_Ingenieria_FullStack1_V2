@@ -1,10 +1,11 @@
 server:
-  port: 8081 #y así sucesivamente....
+  port: ${PORT:8081}
 
 spring:
   datasource:
-    # Usamos el nombre del servicio de red de MySQL y la DB del init.sql
-    url: jdbc:mysql://logistica-mysql:3306/db_service_auth?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    # CORREGIDO: Se cambia 'logistica-mysql' por 'mysql-db' para alinearse con el nombre del servicio en el compose.yml,
+    # permitiendo que el DNS interno de Docker resuelva la conexión a la base de datos de forma correcta.
+    url: jdbc:mysql://mysql-db:3306/db_service_auth?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: app_user
     password: "1234"
   jpa:
@@ -15,7 +16,33 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
   kafka:
-    bootstrap-servers: kafka:29092
+    # Nota: bootstrap-servers se hereda del global, pero se mantienen los parámetros específicos del productor
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Tolerancia a fallos: reintentos y resiliencia si Kafka tarda en responder en frío
+      retries: 3
+      properties:
+        retry.backoff.ms: 1000
+        max.block.ms: 5000
+
+# Vinculación obligatoria para que el microservicio sea visible ante el API Gateway
+# Nota: La configuración base se hereda del archivo global, asegurando el 'prefer-ip-address: true'
+eureka:
+  instance:
+    prefer-ip-address: true
+
+# Habilitar Actuator para el control de estados en Docker Compose
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+
+# Monitoreo interno adaptado al package real reflejado en la ramificación
+logging:
+  level:
+    com.logistica.ms_auth: DEBUG

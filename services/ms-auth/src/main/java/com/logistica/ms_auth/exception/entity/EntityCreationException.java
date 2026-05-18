@@ -1,10 +1,12 @@
 package com.logistica.ms_auth.exception.entity;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
-@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+/**
+ * EXCEPCIÓN DE NEGOCIO: ERROR DE CREACIÓN INTERNO (500)
+ * OPTIMIZACIÓN: Se remueve la anotación @ResponseStatus para unificar el control
+ * y formateo en el GlobalExceptionHandler de ms-auth.
+ */
 public class EntityCreationException extends RuntimeException {
+    
     public EntityCreationException(String mensaje) {
         super(mensaje);
     }

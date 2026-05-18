@@ -1,12 +1,11 @@
 package com.logistica.ms_auth.model;
 
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,38 +17,48 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "UserCredencial")
+/**
+ * OPTIMIZACIÓN: Se cambia el nombre de la tabla a snake_case y minúsculas para 
+ * garantizar compatibilidad absoluta con motores de bases de datos en contenedores Linux.
+ */
+@Table(name = "user_credenciales")
 public class UserCredencial {
-    /*
-     * idUser
-     * username
-     * isActiva
-     * lastLogin
-     * 
-     */
 
     @Id
     @NotNull(message = "El ID es obligatorio")
-    private Long id; // Id asignado por el ms-users
+    @Column(name = "user_id") // Deja en claro que mapea al ID del perfil remoto
+    private Long id; 
 
     @Column(unique = true, nullable = false)
     @NotBlank(message = "El username es obligatorio")
     private String username;
 
+    @Column(nullable = false)
     @NotBlank(message = "El password es obligatorio")
     private String password;
 
-    private Boolean isActive; // Para bloquear o desbloquear
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive; 
 
-    private Timestamp lastLogin;
+    /**
+     * OPTIMIZACIÓN: Se migra de java.sql.Timestamp a LocalDateTime para cumplir 
+     * con los estándares modernos de auditoría temporal en Java 21.
+     */
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
 
+    /**
+     * CICLO DE VIDA DE PERSISTENCIA
+     * Asegura que al insertar la fila por primera vez, el usuario nazca activo 
+     * y sin registros de login previos falsos.
+     */
     @PrePersist
     protected void onCreate() {
-        this.isActive = true;
+        if (this.isActive == null) {
+            this.isActive = true;
+        }
     }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.lastLogin = new Timestamp(System.currentTimeMillis());
-    }
+    
+    // CORRECCIÓN: Se elimina @PreUpdate automático para evitar que se pise el 'lastLogin' 
+    // cuando el usuario simplemente actualice su cuenta o correo electrónico.
 }

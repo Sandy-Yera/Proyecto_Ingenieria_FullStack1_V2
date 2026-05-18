@@ -4,7 +4,8 @@ server:
 spring:
   # Configuración de la Base de Datos para guardar los registros
   datasource:
-    url: jdbc:mysql://logistica-mysql:3306/db_service_logs?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    # CORREGIDO: Cambiado 'logistica-mysql' por 'mysql-db' para alinearse con el nombre del servicio en el compose.yml
+    url: jdbc:mysql://mysql-db:3306/db_service_logs?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: app_user
     password: "1234"
   jpa:
@@ -14,6 +15,7 @@ spring:
 
   # Configuración del Consumidor de Kafka
   kafka:
+    # Nota: bootstrap-servers se hereda del global, pero se mantiene la simetría explícita
     bootstrap-servers: kafka:29092
     consumer:
       group-id: logs-group
@@ -25,6 +27,8 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://logistica-eureka:8761/eureka/
+      # CORREGIDO: Cambiado 'logistica-eureka' por 'eureka-server' para garantizar que el DNS de Docker
+      # localice el servidor de descubrimiento y el microservicio no quede invisible.
+      defaultZone: http://eureka-server:8761/eureka/
   instance:
     prefer-ip-address: true
