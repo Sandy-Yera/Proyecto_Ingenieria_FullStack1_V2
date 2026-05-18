@@ -21,6 +21,9 @@ services/ms-users
 services/ms-buildings
 services/ms-staff
 services/ms-fleet
+services/ms-security
+services/ms-quotes
+services/ms-inventory
 "
 
 # --- DETECCIÓN DINÁMICA DE ARGUMENTOS ---

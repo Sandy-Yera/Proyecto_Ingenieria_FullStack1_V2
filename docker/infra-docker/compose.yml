@@ -276,6 +276,79 @@ services:
         condition: service_healthy
     networks:
       - edificios-network
+  
+  brm-ms-security:
+    build:
+      context: ../../services/ms-security
+      dockerfile: Dockerfile
+    container_name: brm-ms-security
+    image: brm-ms-security:latest
+    ports:
+      - "8087:8087"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - edificios-network
+    restart: on-failure
+  
+  brm-ms-quotes:
+    build:
+      context: ../../services/ms-quotes
+      dockerfile: Dockerfile
+    container_name: brm-ms-quotes
+    image: brm-ms-quotes:latest
+    ports:
+      - "8088:8088"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - edificios-network
+    restart: on-failure
+  
+  brm-ms-inventory:
+    build:
+      context: ../../services/ms-inventory
+      dockerfile: Dockerfile
+    container_name: brm-ms-inventory
+    image: brm-ms-inventory:latest
+    ports:
+      - "8089:8089"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - edificios-network
+    restart: on-failure
 
 networks:
   edificios-network:
