@@ -77,7 +77,7 @@ public class UserCredencialController {
     }
 
     /**
-     * --- ACTUALIZAR ---
+     * --- ACTUALIZAR POR ID CREDENCIAL ---
      * Mapea a PUT /api/auth/{id} usando @PathVariable para capturar el identificador.
      */
     @PutMapping("/{id}")
@@ -85,6 +85,18 @@ public class UserCredencialController {
             @Valid @RequestBody UserCredencialRegisterDTO datosActualizados,
             @PathVariable Long id) { 
         return ResponseEntity.ok(userCredencialService.actualizarUserCredencial(id, datosActualizados));
+    }
+
+    /**
+     * 🟢 NUEVO ENDPOINT (Solución Crítico 1):
+     * Mapea a PUT /api/auth/usuario/{userId}
+     * Escucha la llamada síncrona de ms-users cuando un usuario cambia su correo.
+     */
+    @PutMapping("/usuario/{userId}")
+    public ResponseEntity<UserCredencialResponseDTO> actualizarUserPorUserId(
+            @Valid @RequestBody UserCredencialRegisterDTO datosActualizados,
+            @PathVariable Long userId) { 
+        return ResponseEntity.ok(userCredencialService.actualizarPorUserId(userId, datosActualizados));
     }
 
     /**

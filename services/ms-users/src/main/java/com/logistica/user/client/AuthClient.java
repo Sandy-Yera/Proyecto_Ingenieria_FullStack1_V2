@@ -3,9 +3,10 @@ package com.logistica.user.client;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping; // Agregado para la actualización
+import org.springframework.web.bind.annotation.PathVariable; // Agregado para capturar el ID
 import org.springframework.web.bind.annotation.RequestBody;
 
-// CORRECCIÓN: Se agrega el import faltante para que el compilador reconozca el DTO de respuesta
 import com.logistica.user.dto.UserCredencialResponseDTO;
 import com.logistica.user.dto.UserCredencialRegisterDTO;
 
@@ -23,4 +24,15 @@ public interface AuthClient {
      */
     @PostMapping("/api/auth") 
     ResponseEntity<UserCredencialResponseDTO> generarCredencialesRemotas(@RequestBody UserCredencialRegisterDTO dto);
+
+    /**
+     * 🟢 NUEVO MÉTODO (Solución Crítico 1):
+     * Envía las nuevas credenciales de correo a ms-auth asociadas al ID del usuario.
+     * Mapea directamente con el endpoint de actualización remota.
+     */
+    @PutMapping("/api/auth/usuario/{userId}")
+    ResponseEntity<UserCredencialResponseDTO> actualizarCredencialesRemotas(
+            @PathVariable("userId") Long userId, 
+            @RequestBody UserCredencialRegisterDTO dto
+    );
 }

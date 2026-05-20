@@ -6,10 +6,11 @@ import org.springframework.stereotype.Service;
 
 import com.logistica.ms_buildings.exception.entity.EntityBadRequestException;
 import com.logistica.ms_buildings.exception.entity.EntityConflictException;
+import com.logistica.ms_buildings.exception.entity.EntityNotFoundException;
 import com.logistica.ms_buildings.model.Edificio;
 import com.logistica.ms_buildings.repository.EdificioRepository; // Nota: Asegúrate de crear esta interfaz básica de JpaRepository
 
-import jakarta.persistence.EntityNotFoundException;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 

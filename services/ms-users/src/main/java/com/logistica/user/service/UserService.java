@@ -133,12 +133,19 @@ public class UserService {
             try {
                 UserCredencialRegisterDTO credencialesDTO = new UserCredencialRegisterDTO();
                 credencialesDTO.setUsername(actualizado.getCorreo());
-                credencialesDTO.setPassword(dto.getPassword());
+                // No enviamos password ya que el nuevo endpoint especializado de ms-auth resguarda la clave existente
 
                 logProducer.sendLog("INFO", "Propagando cambio de Username a ms-auth para el ID: " + id + " | TraceId: " + traceId);
+                
+                // 🚀 ¡SOLUCIÓN CRÍTICO 1!: Se gatilla la llamada de red real vía OpenFeign
+                authClient.actualizarCredencialesRemotas(id, credencialesDTO);
+                
+                logProducer.sendLog("INFO", "Sincronización de credenciales exitosa en ms-auth para ID: " + id + " | TraceId: " + traceId);
+                
             } catch (Exception ex) {
-                logProducer.sendLog("ERROR", "No se pudo sincronizar el nuevo correo con ms-auth para ID: " + id + " | TraceId: " + traceId);
-                throw new EntityConflictException("Error al actualizar las credenciales del sistema. Operación revertida.");
+                logProducer.sendLog("ERROR", "No se pudo sincronizar el nuevo correo con ms-auth para ID: " + id + ". Detalle: " + ex.getMessage() + " | TraceId: " + traceId);
+                // Lanzamos EntityBadRequestException para forzar de inmediato el Rollback del saveAndFlush local
+                throw new EntityBadRequestException("No se pudo actualizar el perfil debido a un error de sincronización de seguridad con ms-auth. Operación revertida.");
             }
         }
 

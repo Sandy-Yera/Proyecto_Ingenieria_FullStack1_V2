@@ -6,10 +6,10 @@ import org.springframework.stereotype.Service;
 
 import com.logistica.ms_security.exception.entity.EntityBadRequestException;
 import com.logistica.ms_security.exception.entity.EntityConflictException;
+import com.logistica.ms_security.exception.entity.EntityNotFoundException;
 import com.logistica.ms_security.model.Role;
 import com.logistica.ms_security.repository.RoleRepository;
 
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 @Service

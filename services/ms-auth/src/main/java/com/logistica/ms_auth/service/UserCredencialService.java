@@ -102,6 +102,43 @@ public class UserCredencialService {
         return convertirAResponseDTO(usuarioExistente);
     }
 
+    /**
+     * 🟢 NUEVO MÉTODO (Solución Crítico 1):
+     * Busca la credencial ligada al ID del usuario y actualiza únicamente 
+     * el username (correo), protegiendo la contraseña de encriptaciones duplicadas corruptas.
+     */
+    @Transactional
+    public UserCredencialResponseDTO actualizarPorUserId(Long userId, UserCredencialRegisterDTO dto) {
+        String traceId = request.getHeader("X-Trace-Id");
+
+        // Dado que el ID de la credencial mapea 1:1 con el ID del usuario, usamos findById
+        UserCredencial credencialExistente = userCredencialRepository.findById(userId)
+                .orElseThrow(() -> {
+                    logProducer.sendLog("WARN", "Intento fallido de sincronizar correo. No existen credenciales para el ID de Usuario: " + userId + " | TraceId: " + traceId);
+                    return new EntityNotFoundException("No se encontraron credenciales de autenticación para el usuario con ID " + userId);
+                });
+
+        // Validar que el nuevo correo electrónico no lo tenga tomado otro usuario en ms-auth
+        if (!credencialExistente.getUsername().equalsIgnoreCase(dto.getUsername()) &&
+                userCredencialRepository.existsByUsername(dto.getUsername())) {
+            logProducer.sendLog("WARN", "Conflicto de sincronización para Usuario ID " + userId + ". El Username '" + dto.getUsername() + "' ya existe en el sistema de seguridad. | TraceId: " + traceId);
+            throw new EntityConflictException("El nuevo correo electrónico ya se encuentra registrado por otro usuario.");
+        }
+
+        // Sincronización atómica: Modificamos única y exclusivamente el username
+        credencialExistente.setUsername(dto.getUsername());
+        
+        // Conservar estados si el DTO de propagación no los altera
+        if (dto.getIsActive() != null) {
+            credencialExistente.setIsActive(dto.getIsActive());
+        }
+
+        logProducer.sendLog("INFO", "Sincronización de credencial exitosa. Username del Usuario ID " + userId + " cambiado a: " + dto.getUsername() + " | TraceId: " + traceId);
+        
+        // Al terminar el método con @Transactional, Spring sincroniza automáticamente los cambios con la base de datos
+        return convertirAResponseDTO(credencialExistente);
+    }
+
     @Transactional
     public void eliminarUserCredencial(Long id) {
         String traceId = request.getHeader("X-Trace-Id");
