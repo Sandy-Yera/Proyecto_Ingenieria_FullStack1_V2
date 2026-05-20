@@ -18,8 +18,10 @@ public class KafkaLogProducer {
 
     public KafkaLogProducer(KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
         this.kafkaTemplate = kafkaTemplate;
-        // Registramos JavaTimeModule para que Jackson pueda serializar Instant correctamente
-        this.objectMapper = objectMapper
+        
+        // 🟠 SOLUCIÓN ALTO 2: Usamos .copy() para crear una copia privada exclusiva.
+        // Previene la contaminación del ObjectMapper compartido por Spring en ms-auth.
+        this.objectMapper = objectMapper.copy()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }

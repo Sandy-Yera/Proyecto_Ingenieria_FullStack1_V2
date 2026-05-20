@@ -9,10 +9,9 @@ spring:
           enabled: true
           lower-case-service-id: true # Evita conflictos si Eureka registra en mayúsculas o minúsculas
 
-      # Filtro GLOBAL: Inyecta el Trace ID único para la auditoría asíncrona con ms-logs
-      # NOTA: '${random.uuid}' genera un ID estático al arrancar. Para producción, usar un GlobalFilter en código Java.
-      default-filters:
-        - AddRequestHeader=X-Trace-Id, ${random.uuid}
+      # 🟠 SOLUCIÓN ALTO 3: Se remueve el filtro AddRequestHeader estático de YAML.
+      # La inyección del X-Trace-Id dinámico se delega ahora a un GlobalFilter reactivo en Java.
+      default-filters: []
 
       routes:
         - id: ms-auth

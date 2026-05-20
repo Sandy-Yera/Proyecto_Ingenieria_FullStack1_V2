@@ -82,21 +82,35 @@ public class UserService {
         nuevoUser = convertirAEntidad(dto, nuevoUser);
         
         User guardadoLocal = userRepository.saveAndFlush(nuevoUser);
+        Long generadoId = guardadoLocal.getId();
         
-        logProducer.sendLog("INFO", "Perfil de usuario guardado localmente con ID: " + guardadoLocal.getId() + " | TraceId: " + traceId);
+        logProducer.sendLog("INFO", "Perfil de usuario guardado localmente con ID: " + generadoId + " | TraceId: " + traceId);
 
         try {
             UserCredencialRegisterDTO credencialesDTO = new UserCredencialRegisterDTO();
-            credencialesDTO.setId(guardadoLocal.getId());
+            credencialesDTO.setId(generadoId);
             credencialesDTO.setUsername(dto.getCorreo()); 
             credencialesDTO.setPassword(dto.getPassword()); 
 
+            // Llamada síncrona de red
             authClient.generarCredencialesRemotas(credencialesDTO);
-            logProducer.sendLog("INFO", "Credenciales asignadas remotamente en ms-auth para ID: " + guardadoLocal.getId() + " | TraceId: " + traceId);
+            logProducer.sendLog("INFO", "Credenciales asignadas remotamente en ms-auth para ID: " + generadoId + " | TraceId: " + traceId);
 
         } catch (Exception ex) {
-            logProducer.sendLog("ERROR", "Error crítico en ms-auth. Abortando registro integral para ID: " + guardadoLocal.getId() + ". Detalle: " + ex.getMessage() + " | TraceId: " + traceId);
-            throw new EntityConflictException("No se pudieron registrar las credenciales de seguridad. Proceso de registro cancelado.");
+            logProducer.sendLog("ERROR", "Error crítico en el flujo de registro distributivo para ID: " + generadoId + ". Iniciando saga compensatoria de borrado. Detalle: " + ex.getMessage() + " | TraceId: " + traceId);
+            
+            // 🟠 SOLUCIÓN ALTO 1 (Saga Compensatoria): 
+            // Si la llamada remota falló a mitad de camino o se produjo un error inmediatamente después, 
+            // forzamos de forma segura un borrado de limpieza en ms-auth para evitar registros fantasmas.
+            try {
+                authClient.eliminarCredencialesRemotas(generadoId);
+                logProducer.sendLog("INFO", "Saga compensatoria ejecutada con éxito. Credenciales huérfanas removidas de ms-auth para ID: " + generadoId + " | TraceId: " + traceId);
+            } catch (Exception compensationEx) {
+                logProducer.sendLog("ERROR", "Fallo crítico e irreversible: No se pudo limpiar la credencial huérfana en ms-auth para ID: " + generadoId + ". Se requiere intervención manual. Detalle: " + compensationEx.getMessage() + " | TraceId: " + traceId);
+            }
+
+            // Relanzamos la excepción para gatillar el Rollback local automático del guardadoLocal
+            throw new EntityConflictException("No se pudieron registrar las credenciales de seguridad correctamente. Proceso de registro cancelado de forma segura.");
         }
 
         return convertirAResponseDTO(guardadoLocal);
