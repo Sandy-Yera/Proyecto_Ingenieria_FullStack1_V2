@@ -12,36 +12,34 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.logistica.ms_security.model.RoleAssignment;
+import com.logistica.ms_security.dto.RoleAssignmentRequestDTO;  // 🟢 Nuevo: Import Request DTO
+import com.logistica.ms_security.dto.RoleAssignmentResponseDTO; // 🟢 Nuevo: Import Response DTO
 import com.logistica.ms_security.service.RoleAssignmentService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/role-assignments") // MEJORA: Ruta cambiada para reflejar el recurso correcto
+@RequestMapping("/api/role-assignments")
 @RequiredArgsConstructor
 public class RoleAssignmentController {
 
     private final RoleAssignmentService roleAssignmentService;
 
-    // CRUD
-
     // CREAR
     @PostMapping
-    public ResponseEntity<RoleAssignment> crearRoleAssignment(
-            @Valid @RequestBody RoleAssignment roleAssignment) {
+    public ResponseEntity<RoleAssignmentResponseDTO> crearRoleAssignment(
+            @Valid @RequestBody RoleAssignmentRequestDTO assignmentDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(roleAssignmentService.crearRoleAssignment(roleAssignment));
+                .body(roleAssignmentService.crearRoleAssignment(assignmentDTO));
     }
 
     // LEER
     @GetMapping
-    public ResponseEntity<List<RoleAssignment>> listarRoleAssignments() {
-        List<RoleAssignment> listado = roleAssignmentService.listarRoleAssignments();
+    public ResponseEntity<List<RoleAssignmentResponseDTO>> listarRoleAssignments() {
+        List<RoleAssignmentResponseDTO> listado = roleAssignmentService.listarRoleAssignments();
         
         return listado.isEmpty() 
                 ? ResponseEntity.noContent().build() 
@@ -50,8 +48,8 @@ public class RoleAssignmentController {
 
     // ACTUALIZAR
     @PutMapping("/{id}")
-    public ResponseEntity<RoleAssignment> actualizarRoleAssignment(
-            @Valid @RequestBody RoleAssignment datosActualizados,
+    public ResponseEntity<RoleAssignmentResponseDTO> actualizarRoleAssignment(
+            @Valid @RequestBody RoleAssignmentRequestDTO datosActualizados,
             @PathVariable Long id) { 
         return ResponseEntity.ok(roleAssignmentService.actualizarRoleAssignment(id, datosActualizados));
     }

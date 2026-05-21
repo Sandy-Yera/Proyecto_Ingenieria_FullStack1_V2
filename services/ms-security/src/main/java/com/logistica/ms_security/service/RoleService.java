@@ -1,10 +1,13 @@
 package com.logistica.ms_security.service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // 🟢 Corrección: Import oficial de Spring Framework
+import org.springframework.transaction.annotation.Transactional;
 
+import com.logistica.ms_security.dto.RoleRequestDTO;  // 🟢 Import DTO Request
+import com.logistica.ms_security.dto.RoleResponseDTO; // 🟢 Import DTO Response
 import com.logistica.ms_security.exception.entity.EntityBadRequestException;
 import com.logistica.ms_security.exception.entity.EntityConflictException;
 import com.logistica.ms_security.exception.entity.EntityNotFoundException;
@@ -15,54 +18,60 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) // 🟢 Configura lectura optimizada por defecto para todo el servicio
+@Transactional(readOnly = true)
 public class RoleService {
+    
     private final RoleRepository roleRepository;
 
-    // CRUD 
-
     // CREAR
-    @Transactional // 🟢 Sobrescribe el modo readOnly para permitir escritura segura
-    public Role crearRole(Role role) {
-        if (role.getId() != null) {
-            throw new EntityConflictException("Ya existe un rol con este ID");
-        }
-        return roleRepository.save(role);
+    @Transactional
+    public RoleResponseDTO crearRole(RoleRequestDTO roleDTO) {
+        // Mapear de RequestDTO a Entidad
+        Role role = new Role();
+        role.setRolName(roleDTO.getRolName());
+        role.setJsonPermissions(roleDTO.getJsonPermissions());
+
+        Role roleGuardado = roleRepository.save(role);
+        return convertToResponseDTO(roleGuardado);
     }
 
     // LEER
-    public List<Role> listarRole() {
-        return roleRepository.findAll();
+    public List<RoleResponseDTO> listarRole() {
+        return roleRepository.findAll().stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
     }
     
     // ACTUALIZAR
-    @Transactional // 🟢 Permite la sincronización de estados con la BD mediante Dirty Checking
-    public Role actualizarRole(Long id, Role role) {
+    @Transactional
+    public RoleResponseDTO actualizarRole(Long id, RoleRequestDTO roleDTO) {
         Role roleExistente = roleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("No se puede actualizar. El rol con ID " + id + " no existe."));
-
-        if (role.getId() != null && !role.getId().equals(id)) {
-            throw new EntityBadRequestException("El id ingresado y el del ROL no coinciden");
-        }
                 
-        // 🟢 SOLUCIÓN BAJO 1: Limpieza de asignación redundante.
-        // Se removió 'role.setId(id)' ya que modificaba un objeto transitorio. 
-        // La actualización real se propaga automáticamente sobre 'roleExistente' gracias al Dirty Checking de JPA.
-        roleExistente.setRolName(role.getRolName());
-        if (role.getJsonPermissions() != null) {
-            roleExistente.setJsonPermissions(role.getJsonPermissions());
+        // Sincronización mediante Dirty Checking mapeando los datos del Request DTO
+        roleExistente.setRolName(roleDTO.getRolName());
+        if (roleDTO.getJsonPermissions() != null) {
+            roleExistente.setJsonPermissions(roleDTO.getJsonPermissions());
         }
 
-        return roleExistente;
+        return convertToResponseDTO(roleExistente);
     }
 
     // ELIMINAR
-    @Transactional // 🟢 Sobrescribe para permitir borrado físico seguro
+    @Transactional
     public void eliminarRole(Long id) {
         if (!roleRepository.existsById(id)) {
             throw new EntityNotFoundException("No se encontró el role a eliminar.");
         }
-
         roleRepository.deleteById(id);
+    }
+
+    // 🟢 MÉTODOS AUXILIARES DE CONVERSIÓN (Mappers manuales limpios)
+    private RoleResponseDTO convertToResponseDTO(Role role) {
+        RoleResponseDTO dto = new RoleResponseDTO();
+        dto.setId(role.getId());
+        dto.setRolName(role.getRolName());
+        dto.setJsonPermissions(role.getJsonPermissions());
+        return dto;
     }
 }

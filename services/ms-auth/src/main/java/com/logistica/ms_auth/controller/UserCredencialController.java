@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.logistica.ms_auth.dto.ActualizarUsernameDTO; // 🟢 NUEVO: Importación del DTO específico de seguridad
 import com.logistica.ms_auth.dto.UserCredencialRegisterDTO;
 import com.logistica.ms_auth.dto.UserCredencialResponseDTO;
 import com.logistica.ms_auth.exception.entity.EntityBadRequestException;
@@ -88,13 +89,13 @@ public class UserCredencialController {
     }
 
     /**
-     * 🟢 NUEVO ENDPOINT (Solución Crítico 1):
+     * 🟢 ENDPOINT REFACTORIZADO (Solución Etapa 3):
      * Mapea a PUT /api/auth/usuario/{userId}
-     * Escucha la llamada síncrona de ms-users cuando un usuario cambia su correo.
+     * Ahora recibe únicamente ActualizarUsernameDTO, eliminando el riesgo de procesar o exigir passwords.
      */
     @PutMapping("/usuario/{userId}")
     public ResponseEntity<UserCredencialResponseDTO> actualizarUserPorUserId(
-            @Valid @RequestBody UserCredencialRegisterDTO datosActualizados,
+            @Valid @RequestBody ActualizarUsernameDTO datosActualizados, // 🟢 Corrección: Tipo de DTO modificado
             @PathVariable Long userId) { 
         return ResponseEntity.ok(userCredencialService.actualizarPorUserId(userId, datosActualizados));
     }

@@ -1,11 +1,14 @@
 package com.logistica.ms_security.service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // 🟢 Import oficial de Spring
+import org.springframework.transaction.annotation.Transactional;
 
+import com.logistica.ms_security.dto.RoleAssignmentRequestDTO;  // 🟢 Import Request DTO
+import com.logistica.ms_security.dto.RoleAssignmentResponseDTO; // 🟢 Import Response DTO
 import com.logistica.ms_security.exception.entity.EntityBadRequestException;
 import com.logistica.ms_security.exception.entity.EntityConflictException;
 import com.logistica.ms_security.exception.entity.EntityNotFoundException;
@@ -16,61 +19,74 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) // 🟢 MEJORA ETAPA 2: Por defecto, todo el servicio optimiza las lecturas en la BD
+@Transactional(readOnly = true) // 🟢 Mantiene optimización de lectura global de la Etapa 2
 public class RoleAssignmentService {
 
     private final RoleAssignmentRepository roleAssignmentRepository;
 
-    @Transactional // 🟢 Sobrescribe para permitir escritura segura
-    public RoleAssignment crearRoleAssignment(RoleAssignment assignment) {
-        if (assignment.getIdUser() == null || assignment.getIdRole() == null) {
+    @Transactional // 🟢 Transacción de escritura
+    public RoleAssignmentResponseDTO crearRoleAssignment(RoleAssignmentRequestDTO dto) {
+        if (dto.getIdUser() == null || dto.getIdRole() == null) {
             throw new EntityBadRequestException("El ID de usuario y el ID de rol son requeridos.");
         }
 
-        // 🟢 Corre en modo optimizado de lectura hasta que se ejecute el .save() final
-        roleAssignmentRepository.findByIdUserAndIdRole(assignment.getIdUser(), assignment.getIdRole())
+        // Validación de duplicados usando los datos del DTO
+        roleAssignmentRepository.findByIdUserAndIdRole(dto.getIdUser(), dto.getIdRole())
                 .ifPresent(existing -> {
-                    throw new EntityConflictException("El usuario con ID " + assignment.getIdUser() + 
-                            " ya tiene asignado el rol con ID " + assignment.getIdRole());
+                    throw new EntityConflictException("El usuario con ID " + dto.getIdUser() + 
+                            " ya tiene asignado el rol con ID " + dto.getIdRole());
                 });
 
-        assignment.setId(null); 
-        return roleAssignmentRepository.save(assignment);
+        // Mapeo manual limpio de Request DTO a Entidad
+        RoleAssignment assignment = new RoleAssignment();
+        assignment.setIdRole(dto.getIdRole());
+        assignment.setIdUser(dto.getIdUser());
+
+        RoleAssignment guardado = roleAssignmentRepository.save(assignment);
+        return convertToResponseDTO(guardado);
     }
 
-    // 🟢 Ya no necesita anotación individual porque hereda el 'readOnly = true' de la clase
-    public List<RoleAssignment> listarRoleAssignments() {
-        return roleAssignmentRepository.findAll();
+    // LEER (Optimizado en Solo Lectura)
+    public List<RoleAssignmentResponseDTO> listarRoleAssignments() {
+        return roleAssignmentRepository.findAll().stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    @Transactional // 🟢 Sobrescribe para permitir actualización y sincronización por Dirty Checking
-    public RoleAssignment actualizarRoleAssignment(@NonNull Long id, RoleAssignment assignment) {
+    @Transactional // 🟢 Transacción de escritura y Dirty Checking
+    public RoleAssignmentResponseDTO actualizarRoleAssignment(@NonNull Long id, RoleAssignmentRequestDTO dto) {
         RoleAssignment assignmentExistente = roleAssignmentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("No se puede actualizar. La asignación con ID " + id + " no existe."));
-
-        if (assignment.getId() != null && !assignment.getId().equals(id)) {
-            throw new EntityBadRequestException("El id ingresado y el de la asignación no coinciden.");
-        }
         
-        // 🟢 Al estar la clase en readOnly por defecto, esta consulta intermedia no bloquea filas de la base de datos
-        if (!assignmentExistente.getIdUser().equals(assignment.getIdUser()) || !assignmentExistente.getIdRole().equals(assignment.getIdRole())) {
-            roleAssignmentRepository.findByIdUserAndIdRole(assignment.getIdUser(), assignment.getIdRole())
+        // Validación cruzada para evitar colisiones al mutar
+        if (!assignmentExistente.getIdUser().equals(dto.getIdUser()) || !assignmentExistente.getIdRole().equals(dto.getIdRole())) {
+            roleAssignmentRepository.findByIdUserAndIdRole(dto.getIdUser(), dto.getIdRole())
                     .ifPresent(existing -> {
                         throw new EntityConflictException("No se puede actualizar: Ya existe una asignación para ese usuario y rol.");
                     });
         }
         
-        assignmentExistente.setIdRole(assignment.getIdRole());
-        assignmentExistente.setIdUser(assignment.getIdUser());
+        // Sincronización automática mediante Dirty Checking
+        assignmentExistente.setIdRole(dto.getIdRole());
+        assignmentExistente.setIdUser(dto.getIdUser());
 
-        return assignmentExistente;
+        return convertToResponseDTO(assignmentExistente);
     }
 
-    @Transactional // 🟢 Sobrescribe para permitir borrado físico
+    @Transactional
     public void eliminarRoleAssignment(@NonNull Long id) {
         if (!roleAssignmentRepository.existsById(id)) {
             throw new EntityNotFoundException("No se encontró la asignación a eliminar.");
         }
         roleAssignmentRepository.deleteById(id);
+    }
+
+    // 🟢 MÉTODOS AUXILIARES DE CONVERSIÓN (Mappers manuales limpios)
+    private RoleAssignmentResponseDTO convertToResponseDTO(RoleAssignment assignment) {
+        RoleAssignmentResponseDTO dto = new RoleAssignmentResponseDTO();
+        dto.setId(assignment.getId());
+        dto.setIdRole(assignment.getIdRole());
+        dto.setIdUser(assignment.getIdUser());
+        return dto;
     }
 }

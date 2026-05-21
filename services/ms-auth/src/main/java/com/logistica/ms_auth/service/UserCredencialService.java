@@ -5,6 +5,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.logistica.ms_auth.dto.ActualizarUsernameDTO; // 🟢 NUEVO: Importación del DTO específico
 import com.logistica.ms_auth.dto.UserCredencialRegisterDTO;
 import com.logistica.ms_auth.dto.UserCredencialResponseDTO;
 import com.logistica.ms_auth.exception.entity.*;
@@ -103,12 +104,12 @@ public class UserCredencialService {
     }
 
     /**
-     * 🟢 NUEVO MÉTODO (Solución Crítico 1):
-     * Busca la credencial ligada al ID del usuario y actualiza únicamente 
-     * el username (correo), protegiendo la contraseña de encriptaciones duplicadas corruptas.
+     * 🟢 METODO REFACTORIZADO (Etapa 3):
+     * Ahora recibe de forma estricta y segura el ActualizarUsernameDTO.
+     * Sincroniza el correo aislando por completo las contraseñas.
      */
     @Transactional
-    public UserCredencialResponseDTO actualizarPorUserId(Long userId, UserCredencialRegisterDTO dto) {
+    public UserCredencialResponseDTO actualizarPorUserId(Long userId, ActualizarUsernameDTO dto) { // 🟢 Corrección: Tipo de DTO modificado
         String traceId = request.getHeader("X-Trace-Id");
 
         // Dado que el ID de la credencial mapea 1:1 con el ID del usuario, usamos findById
@@ -125,17 +126,11 @@ public class UserCredencialService {
             throw new EntityConflictException("El nuevo correo electrónico ya se encuentra registrado por otro usuario.");
         }
 
-        // Sincronización atómica: Modificamos única y exclusivamente el username
+        // Sincronización atómica: Modificamos única y exclusivamente el username de manera segura
         credencialExistente.setUsername(dto.getUsername());
-        
-        // Conservar estados si el DTO de propagación no los altera
-        if (dto.getIsActive() != null) {
-            credencialExistente.setIsActive(dto.getIsActive());
-        }
 
         logProducer.sendLog("INFO", "Sincronización de credencial exitosa. Username del Usuario ID " + userId + " cambiado a: " + dto.getUsername() + " | TraceId: " + traceId);
         
-        // Al terminar el método con @Transactional, Spring sincroniza automáticamente los cambios con la base de datos
         return convertirAResponseDTO(credencialExistente);
     }
 

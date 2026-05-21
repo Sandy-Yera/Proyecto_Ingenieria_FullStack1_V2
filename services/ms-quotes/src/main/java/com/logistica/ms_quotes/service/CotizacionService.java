@@ -1,12 +1,15 @@
 package com.logistica.ms_quotes.service;
 
 import java.util.List;
-import org.springframework.context.annotation.Lazy; // 🟢 Import para auto-inyección perezosa
+import java.util.stream.Collectors;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.logistica.ms_quotes.client.BuildingClient; 
 import com.logistica.ms_quotes.client.UserClient;     
+import com.logistica.ms_quotes.dto.CotizacionRequestDTO;  // 🟢 Import Request DTO
+import com.logistica.ms_quotes.dto.CotizacionResponseDTO; // 🟢 Import Response DTO
 import com.logistica.ms_quotes.exception.entity.EntityBadRequestException;
 import com.logistica.ms_quotes.exception.entity.EntityConflictException;
 import com.logistica.ms_quotes.exception.entity.EntityNotFoundException;
@@ -14,17 +17,14 @@ import com.logistica.ms_quotes.model.Cotizacion;
 import com.logistica.ms_quotes.repository.CotizacionRepository;
 
 @Service
-@Transactional(readOnly = true) // 🟢 Configura lectura optimizada por defecto (listarCotizaciones() se beneficia de esto)
+@Transactional(readOnly = true) // 🟢 Mantiene optimización de lectura de la Etapa 2
 public class CotizacionService {
 
     private final CotizacionRepository cotizacionRepository;
     private final UserClient userClient;
     private final BuildingClient buildingClient;
-    
-    // 🟢 Inyección perezosa de sí mismo para obligar a Spring a interceptar los métodos transaccionales internos
     private final CotizacionService self;
 
-    // Constructor unificado con Lombok reemplazado manualmente para poder inyectar de forma segura @Lazy
     public CotizacionService(CotizacionRepository cotizacionRepository, 
                              UserClient userClient, 
                              BuildingClient buildingClient, 
@@ -35,70 +35,95 @@ public class CotizacionService {
         this.self = self;
     }
 
-    // CREAR (Paso 1: Fuera de la Transacción)
-    // 🔴 NOTA: Se removió @Transactional de aquí. Las llamadas Feign NO consumen conexiones de base de datos.
-    public Cotizacion crearCotizacion(Cotizacion cotizacion) {
-        // 1. Validación remota del Usuario en ms-users via OpenFeign (Fuera de Tx)
+    // CREAR (Paso 1: Fuera de la Transacción - Sin retener conexiones Hikari)
+    public CotizacionResponseDTO crearCotizacion(CotizacionRequestDTO dto) {
+        // 1. Validación remota del Usuario en ms-users via OpenFeign
         try {
-            userClient.obtenerUsuarioPorId(cotizacion.getUserId());
+            userClient.obtenerUsuarioPorId(dto.getUserId());
         } catch (Exception e) {
             throw new EntityNotFoundException("No se puede crear la cotización. El Usuario con ID " 
-                    + cotizacion.getUserId() + " no existe en el sistema.");
+                    + dto.getUserId() + " no existe en el sistema.");
         }
 
-        // 2. Validación remota del Edificio en ms-buildings via OpenFeign (Fuera de Tx)
+        // 2. Validación remota del Edificio en ms-buildings via OpenFeign
         try {
-            buildingClient.obtenerEdificioPorId(cotizacion.getBuildingId());
+            buildingClient.obtenerEdificioPorId(dto.getBuildingId());
         } catch (Exception e) {
             throw new EntityNotFoundException("No se puede crear la cotización. El Edificio con ID " 
-                    + cotizacion.getBuildingId() + " no existe en el sistema.");
+                    + dto.getBuildingId() + " no existe en el sistema.");
         }
 
-        // 3. Si las redes respondieron bien, delegamos la persistencia atómica pasando a través del proxy
+        // Mapear de Request DTO a Entidad antes de entrar a la transacción
+        Cotizacion cotizacion = new Cotizacion();
+        cotizacion.setUserId(dto.getUserId());
+        cotizacion.setBuildingId(dto.getBuildingId());
+        cotizacion.setDescription(dto.getDescription());
+        cotizacion.setCategory(dto.getCategory());
+        cotizacion.setEstimatedAmount(dto.getEstimatedAmount());
+        if (dto.getStatus() != null) {
+            cotizacion.setStatus(dto.getStatus());
+        }
+
+        // 3. Pasamos al proxy para ejecutar la persistencia atómica rápida
         return self.guardarCotizacionTransaccional(cotizacion);
     }
 
     // CREAR (Paso 2: Persistencia Aislada y Transaccional)
-    @Transactional // 🟢 Abre la transacción en el último momento posible, garantizando atomicidad
-    public Cotizacion guardarCotizacionTransaccional(Cotizacion cotizacion) {
+    @Transactional
+    public CotizacionResponseDTO guardarCotizacionTransaccional(Cotizacion cotizacion) {
         if (cotizacion.getId() != null && cotizacionRepository.existsById(cotizacion.getId())) {
             throw new EntityConflictException("Ya existe una cotización con este ID");
         }
-        return cotizacionRepository.save(cotizacion);
+        Cotizacion guardada = cotizacionRepository.save(cotizacion);
+        return convertToResponseDTO(guardada);
     }
 
     // LEER
-    public List<Cotizacion> listarCotizaciones() {
-        return cotizacionRepository.findAll();
+    public List<CotizacionResponseDTO> listarCotizaciones() {
+        return cotizacionRepository.findAll().stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
     }
 
     // ACTUALIZAR
-    @Transactional // 🟢 Requiere escritura y Dirty Checking
-    public Cotizacion actualizarCotizacion(Long id, Cotizacion cotizacion) {
+    @Transactional
+    public CotizacionResponseDTO actualizarCotizacion(Long id, CotizacionRequestDTO dto) {
         Cotizacion cotizacionExistente = cotizacionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("No se puede actualizar. La cotización con ID " + id + " no existe."));
 
-        if (cotizacion.getId() != null && !cotizacion.getId().equals(id)) {
-            throw new EntityBadRequestException("El id ingresado y el de la cotización no coinciden");
+        // Sincronización mediante Dirty Checking usando los datos del Request DTO
+        cotizacionExistente.setUserId(dto.getUserId());
+        cotizacionExistente.setBuildingId(dto.getBuildingId());
+        cotizacionExistente.setDescription(dto.getDescription());
+        cotizacionExistente.setCategory(dto.getCategory());
+        cotizacionExistente.setEstimatedAmount(dto.getEstimatedAmount());
+        if (dto.getStatus() != null) {
+            cotizacionExistente.setStatus(dto.getStatus());
         }
 
-        // Actualizar datos
-        cotizacionExistente.setUserId(cotizacion.getUserId());
-        cotizacionExistente.setBuildingId(cotizacion.getBuildingId());
-        cotizacionExistente.setDescription(cotizacion.getDescription());
-        cotizacionExistente.setCategory(cotizacion.getCategory());
-        cotizacionExistente.setEstimatedAmount(cotizacion.getEstimatedAmount());
-        cotizacionExistente.setStatus(cotizacion.getStatus());
-
-        return cotizacionExistente;
+        return convertToResponseDTO(cotizacionExistente);
     }
 
     // ELIMINAR
-    @Transactional // 🟢 Requiere transacción para eliminación segura
+    @Transactional
     public void eliminarCotizacion(Long id) {
         if (!cotizacionRepository.existsById(id)) {
             throw new EntityNotFoundException("No se encontró la cotización a eliminar.");
         }
         cotizacionRepository.deleteById(id);
+    }
+
+    // 🟢 MÉTODOS AUXILIARES DE CONVERSIÓN (Mappers manuales)
+    private CotizacionResponseDTO convertToResponseDTO(Cotizacion cotizacion) {
+        CotizacionResponseDTO dto = new CotizacionResponseDTO();
+        dto.setId(cotizacion.getId());
+        dto.setUserId(cotizacion.getUserId());
+        dto.setBuildingId(cotizacion.getBuildingId());
+        dto.setDescription(cotizacion.getDescription());
+        dto.setCategory(cotizacion.getCategory());
+        dto.setEstimatedAmount(cotizacion.getEstimatedAmount());
+        dto.setStatus(cotizacion.getStatus());
+        dto.setCreatedAt(cotizacion.getCreatedAt());
+        return dto;
     }
 }

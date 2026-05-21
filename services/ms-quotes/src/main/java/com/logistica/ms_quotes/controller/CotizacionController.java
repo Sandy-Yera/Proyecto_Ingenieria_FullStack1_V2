@@ -10,10 +10,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.logistica.ms_quotes.model.Cotizacion;
+import com.logistica.ms_quotes.dto.CotizacionRequestDTO;  // 🟢 Nuevo: Import Request DTO
+import com.logistica.ms_quotes.dto.CotizacionResponseDTO; // 🟢 Nuevo: Import Response DTO
 import com.logistica.ms_quotes.service.CotizacionService;
 
 import jakarta.validation.Valid;
@@ -28,15 +28,15 @@ public class CotizacionController {
 
     // CREAR
     @PostMapping
-    public ResponseEntity<Cotizacion> crearCotizacion(@Valid @RequestBody Cotizacion cotizacion) {
+    public ResponseEntity<CotizacionResponseDTO> crearCotizacion(@Valid @RequestBody CotizacionRequestDTO cotizacionDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(cotizacionService.crearCotizacion(cotizacion));
+                .body(cotizacionService.crearCotizacion(cotizacionDTO));
     }
 
     // LEER
     @GetMapping
-    public ResponseEntity<List<Cotizacion>> listarCotizaciones() {
-        List<Cotizacion> listado = cotizacionService.listarCotizaciones();
+    public ResponseEntity<List<CotizacionResponseDTO>> listarCotizaciones() {
+        List<CotizacionResponseDTO> listado = cotizacionService.listarCotizaciones();
 
         return listado.isEmpty()
                 ? ResponseEntity.noContent().build()
@@ -45,8 +45,8 @@ public class CotizacionController {
 
     // ACTUALIZAR
     @PutMapping("/{id}")
-    public ResponseEntity<Cotizacion> actualizarCotizacion(
-            @Valid @RequestBody Cotizacion datosActualizados,
+    public ResponseEntity<CotizacionResponseDTO> actualizarCotizacion(
+            @Valid @RequestBody CotizacionRequestDTO datosActualizados,
             @PathVariable Long id) {
         return ResponseEntity.ok(cotizacionService.actualizarCotizacion(id, datosActualizados));
     }

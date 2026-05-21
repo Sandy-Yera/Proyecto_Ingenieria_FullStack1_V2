@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.logistica.ms_buildings.model.Edificio;
+import com.logistica.ms_buildings.dto.EdificioRequestDTO;  // 🟢 Nuevo: Import Request DTO
+import com.logistica.ms_buildings.dto.EdificioResponseDTO; // 🟢 Nuevo: Import Response DTO
 import com.logistica.ms_buildings.service.EdificioService;
 
 import jakarta.validation.Valid;
@@ -29,15 +29,15 @@ public class EdificioController {
     
     // CREAR
     @PostMapping
-    public ResponseEntity<Edificio> crearEdificio(@Valid @RequestBody Edificio edificio) {
+    public ResponseEntity<EdificioResponseDTO> crearEdificio(@Valid @RequestBody EdificioRequestDTO edificioDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(edificioService.crearEdificio(edificio));
+                .body(edificioService.crearEdificio(edificioDTO));
     }
     
     // LEER
     @GetMapping
-    public ResponseEntity<List<Edificio>> listarEdificios() {
-        List<Edificio> listado = edificioService.listarEdificios();
+    public ResponseEntity<List<EdificioResponseDTO>> listarEdificios() {
+        List<EdificioResponseDTO> listado = edificioService.listarEdificios();
         
         return listado.isEmpty() 
                 ? ResponseEntity.noContent().build() 
@@ -46,8 +46,8 @@ public class EdificioController {
     
     // ACTUALIZAR
     @PutMapping("/{id}")
-    public ResponseEntity<Edificio> actualizarEdificio(
-            @Valid @RequestBody Edificio datosActualizados,
+    public ResponseEntity<EdificioResponseDTO> actualizarEdificio(
+            @Valid @RequestBody EdificioRequestDTO datosActualizados,
             @PathVariable Long id) { 
         return ResponseEntity.ok(edificioService.actualizarEdificio(id, datosActualizados));
     }
