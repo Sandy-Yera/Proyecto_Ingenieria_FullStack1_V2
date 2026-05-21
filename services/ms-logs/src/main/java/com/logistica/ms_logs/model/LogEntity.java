@@ -19,7 +19,8 @@ public class LogEntity {
     private String serviceName;
     private String level;
 
-    @Column(length = 1000)
+    //Se corrige poniendo 4000 para evitar truncados silenciosos
+    @Column(length = 4000)
     private String message;
 
     @Column(length = 50)

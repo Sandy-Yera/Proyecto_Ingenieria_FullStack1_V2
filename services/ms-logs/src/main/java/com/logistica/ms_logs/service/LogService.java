@@ -3,9 +3,11 @@ package com.logistica.ms_logs.service;
 import com.logistica.ms_logs.dto.LogResponseDTO;
 import com.logistica.ms_logs.model.LogEntity;
 import com.logistica.ms_logs.repository.LogRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class LogService {
@@ -16,14 +18,18 @@ public class LogService {
         this.logRepository = logRepository;
     }
 
-    // Listar todos los logs del sistema
-    public List<LogResponseDTO> listarTodos() {
-        return logRepository.findAll().stream()
-                .map(this::convertirADto)
-                .toList();
+    public Page<LogResponseDTO> listarConPaginacion(String serviceName, String level, int pagina, int tamano) {
+        String filtroServicio = (serviceName != null) ? serviceName.trim() : "";
+        String filtroNivel = (level != null) ? level.trim() : "";
+
+        // Ordenamos por ID de forma descendente para ver lo más nuevo primero
+        Pageable pageable = PageRequest.of(pagina, tamano, Sort.by("id").descending());
+
+        // 3. Ejecutar la consulta optimizada en la base de datos y mapear los resultados de forma reactiva/funcional
+        return logRepository.findByServiceNameContainingAndLevelContaining(filtroServicio, filtroNivel, pageable)
+                .map(this::convertirADto);
     }
 
-    // Helper para conversión manual sin librerías extra
     private LogResponseDTO convertirADto(LogEntity entity) {
         LogResponseDTO dto = new LogResponseDTO();
         dto.setId(entity.getId());
