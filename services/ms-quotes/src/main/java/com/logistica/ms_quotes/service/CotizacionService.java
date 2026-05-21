@@ -2,20 +2,21 @@ package com.logistica.ms_quotes.service;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // 🟢 Corrección: Import oficial de Spring Framework
 
-import com.logistica.ms_quotes.client.BuildingClient; // Asegúrate de tener creadas estas interfaces Feign
-import com.logistica.ms_quotes.client.UserClient;     // en tu paquete de clientes (com.logistica.ms_quotes.client)
+import com.logistica.ms_quotes.client.BuildingClient; 
+import com.logistica.ms_quotes.client.UserClient;     
 import com.logistica.ms_quotes.exception.entity.EntityBadRequestException;
 import com.logistica.ms_quotes.exception.entity.EntityConflictException;
 import com.logistica.ms_quotes.exception.entity.EntityNotFoundException;
 import com.logistica.ms_quotes.model.Cotizacion;
 import com.logistica.ms_quotes.repository.CotizacionRepository;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true) // 🟢 Configura lectura optimizada por defecto para todo el servicio de cotizaciones
 public class CotizacionService {
 
     private final CotizacionRepository cotizacionRepository;
@@ -25,7 +26,7 @@ public class CotizacionService {
     private final BuildingClient buildingClient;
 
     // CREAR
-    @Transactional // Agregado para asegurar la consistency transaccional de las llamadas distribuidas
+    @Transactional // 🟢 Sobrescribe el modo readOnly para permitir escritura y asegurar consistencia con Feign
     public Cotizacion crearCotizacion(Cotizacion cotizacion) {
         if (cotizacion.getId() != null && cotizacionRepository.existsById(cotizacion.getId())) {
             throw new EntityConflictException("Ya existe una cotización con este ID");
@@ -56,7 +57,7 @@ public class CotizacionService {
     }
 
     // ACTUALIZAR
-    @Transactional
+    @Transactional // 🟢 Activa la transacción de escritura y el Dirty Checking para la actualización diferida
     public Cotizacion actualizarCotizacion(Long id, Cotizacion cotizacion) {
         Cotizacion cotizacionExistente = cotizacionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("No se puede actualizar. La cotización con ID " + id + " no existe."));
@@ -77,9 +78,9 @@ public class CotizacionService {
     }
 
     // ELIMINAR
-    @Transactional
+    @Transactional // 🟢 Permite la eliminación física segura en la base de datos
     public void eliminarCotizacion(Long id) {
-        // 🟢 CORRECCIÓN: Se cambió 'roleRepository' por 'cotizacionRepository' para apuntar al repositorio local correcto.
+        // 🟢 CORRECCIÓN HISTÓRICA: Se mantiene apuntando al repositorio local correcto.
         if (!cotizacionRepository.existsById(id)) {
             throw new EntityNotFoundException("No se encontró la cotización a eliminar.");
         }

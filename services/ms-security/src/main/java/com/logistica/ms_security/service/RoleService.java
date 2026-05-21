@@ -3,6 +3,7 @@ package com.logistica.ms_security.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // 🟢 Corrección: Import oficial de Spring Framework
 
 import com.logistica.ms_security.exception.entity.EntityBadRequestException;
 import com.logistica.ms_security.exception.entity.EntityConflictException;
@@ -10,17 +11,18 @@ import com.logistica.ms_security.exception.entity.EntityNotFoundException;
 import com.logistica.ms_security.model.Role;
 import com.logistica.ms_security.repository.RoleRepository;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true) // 🟢 Configura lectura optimizada por defecto para todo el servicio
 public class RoleService {
     private final RoleRepository roleRepository;
 
     // CRUD 
 
     // CREAR
+    @Transactional // 🟢 Sobrescribe el modo readOnly para permitir escritura segura
     public Role crearRole(Role role) {
         if (role.getId() != null) {
             throw new EntityConflictException("Ya existe un rol con este ID");
@@ -34,7 +36,7 @@ public class RoleService {
     }
     
     // ACTUALIZAR
-    @Transactional
+    @Transactional // 🟢 Permite la sincronización de estados con la BD mediante Dirty Checking
     public Role actualizarRole(Long id, Role role) {
         Role roleExistente = roleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("No se puede actualizar. El rol con ID " + id + " no existe."));
@@ -55,7 +57,7 @@ public class RoleService {
     }
 
     // ELIMINAR
-    @Transactional
+    @Transactional // 🟢 Sobrescribe para permitir borrado físico seguro
     public void eliminarRole(Long id) {
         if (!roleRepository.existsById(id)) {
             throw new EntityNotFoundException("No se encontró el role a eliminar.");

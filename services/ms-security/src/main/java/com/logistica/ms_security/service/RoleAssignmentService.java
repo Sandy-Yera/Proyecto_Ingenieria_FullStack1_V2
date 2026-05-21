@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // 🟢 Corrección: Import oficial de Spring Framework
 
 import com.logistica.ms_security.exception.entity.EntityBadRequestException;
 import com.logistica.ms_security.exception.entity.EntityConflictException;
@@ -11,7 +12,6 @@ import com.logistica.ms_security.exception.entity.EntityNotFoundException;
 import com.logistica.ms_security.model.RoleAssignment;
 import com.logistica.ms_security.repository.RoleAssignmentRepository;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 public class RoleAssignmentService {
     private final RoleAssignmentRepository roleAssignmentRepository;
 
-    @Transactional // Agregado para asegurar la consistencia al consultar y luego insertar
+    @Transactional // 🟢 Ahora gestionado nativamente por Spring AOP
     public RoleAssignment crearRoleAssignment(RoleAssignment assignment) {
         if (assignment.getIdUser() == null || assignment.getIdRole() == null) {
             throw new EntityBadRequestException("El ID de usuario y el ID de rol son requeridos.");
@@ -36,6 +36,7 @@ public class RoleAssignmentService {
         return roleAssignmentRepository.save(assignment);
     }
 
+    @Transactional(readOnly = true) // 🟢 Opcional/Mejora: Optimiza la consulta en modo lectura para MySQL
     public List<RoleAssignment> listarRoleAssignments() {
         return roleAssignmentRepository.findAll();
     }

@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "role_assignement")
+@Table(name = "role_assignments") // 🟢 Corrección del typo: de role_assignement a role_assignments (en plural para buenas prácticas de BD)
 public class RoleAssignment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
