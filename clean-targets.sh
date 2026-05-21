@@ -32,7 +32,7 @@ fi
 
 # Evaluamos el resultado del comando de eliminación según el entorno
 if [ $CLEAN_STATUS -eq 0 ]; then
-    echo -e "${GREEN}✅ ¡Limpieza completada con éxito! Las carpetas target han sido destruidas. El proyecto quedó ligero y listo para la IA. 🚀${NC}"
+    echo -e "${GREEN}✅ ¡Limpieza completada con éxito! Las carpetas target han sido destruidas. El proyecto quedó ligero y listo. 🚀${NC}"
 else
     echo -e "${RED}❌ Hubo un problema al eliminar algunos archivos. Verifica los permisos de tu entorno.${NC}"
     exit 1
