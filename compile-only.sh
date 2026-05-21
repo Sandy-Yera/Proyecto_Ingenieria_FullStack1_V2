@@ -29,11 +29,16 @@ COMPILE_STATUS=$?
 if [ $COMPILE_STATUS -eq 0 ]; then
     echo "✅ Compilación exitosa."
     
-    # --- RESETEO INTELIGENTE DE BASE DE DATOS ---
+    # 🟢 SOLUCIÓN BAJO 4: Centralización de variables de entorno del script.
+    # Extraemos el cálculo de CLEAN_NAME al inicio del bloque global para que esté
+    # disponible de forma transparente para la base de datos Y para el Docker Compose.
+    CLEAN_NAME=""
     if [ -n "$1" ]; then
-        # Extraemos el nombre limpio (por si pasan rutas completas como 'services/ms-users')
         CLEAN_NAME=$(basename "$1")
-        
+    fi
+    
+    # --- RESETEO INTELIGENTE DE BASE DE DATOS ---
+    if [ -n "$CLEAN_NAME" ]; then
         # Filtramos componentes de infraestructura que no usan base de datos de negocio
         if [[ "$CLEAN_NAME" != *"server"* && "$CLEAN_NAME" != *"gateway"* ]]; then
             
@@ -51,7 +56,6 @@ if [ $COMPILE_STATUS -eq 0 ]; then
             echo "💥 Destruyendo y recreando base de datos: $DB_NAME ..."
             
             # 🔍 CORRECCIÓN: Apuntamos al nombre real del contenedor 'logistica-mysql'
-            # Se usa la clave 'root' que mantuviste en tu archivo compose.yml
             docker exec -i logistica-mysql mysql -uroot -proot -e \
                 "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\`;"
             
@@ -68,10 +72,10 @@ if [ $COMPILE_STATUS -eq 0 ]; then
     fi
     # ---------------------------------------------
 
-# 4. Actualización inteligente y AISLADA de Docker Compose
-    if [ -n "$1" ] && [[ "$CLEAN_NAME" != *"server"* && "$CLEAN_NAME" != *"gateway"* ]]; then
+    # --- ACTUALIZACIÓN INTELIGENTE Y AISLADA DE DOCKER COMPOSE ---
+    # 🟢 Ahora lee CLEAN_NAME de forma segura e independiente de lo que pase arriba
+    if [ -n "$CLEAN_NAME" ] && [[ "$CLEAN_NAME" != *"server"* && "$CLEAN_NAME" != *"gateway"* ]]; then
         # Traducimos el nombre del parámetro al nombre del servicio en el compose.yml
-        # Si tus servicios se llaman brm-ms-users, brm-ms-billing, etc:
         SERVICE_CONTAINER_NAME="brm-${CLEAN_NAME}"
         
         echo "🔄 Modo aislado activo en Docker: Actualizando SOLO el contenedor [ $SERVICE_CONTAINER_NAME ]..."

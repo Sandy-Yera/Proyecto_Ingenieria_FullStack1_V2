@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.Instant;
 
 @Entity
 @Table(name = "service_logs")
@@ -23,6 +24,7 @@ public class LogEntity {
     @Column(length = 4000)
     private String message;
 
-    @Column(length = 50)
-    private String timestamp;
+    // 🟢 SOLUCIÓN BAJO 3: Cambio de String a tipo temporal nativo Instant.
+    // Esto mapeará automáticamente la columna en MySQL como un DATETIME(6).
+    private Instant timestamp;
 }

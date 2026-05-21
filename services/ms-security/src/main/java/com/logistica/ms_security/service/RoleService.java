@@ -12,6 +12,7 @@ import com.logistica.ms_security.repository.RoleRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+
 @Service
 @RequiredArgsConstructor
 public class RoleService {
@@ -42,8 +43,9 @@ public class RoleService {
             throw new EntityBadRequestException("El id ingresado y el del ROL no coinciden");
         }
                 
-        //Actualizar datos
-        role.setId(id); 
+        // 🟢 SOLUCIÓN BAJO 1: Limpieza de asignación redundante.
+        // Se removió 'role.setId(id)' ya que modificaba un objeto transitorio. 
+        // La actualización real se propaga automáticamente sobre 'roleExistente' gracias al Dirty Checking de JPA.
         roleExistente.setRolName(role.getRolName());
         if (role.getJsonPermissions() != null) {
             roleExistente.setJsonPermissions(role.getJsonPermissions());
