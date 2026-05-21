@@ -28,6 +28,10 @@ MSYS_NO_PATHCONV=1 docker run --rm -it \
 if [ $? -eq 0 ]; then
     echo "Paso 2: Compilación exitosa. Levantando infraestructura..."
     docker-compose -f docker/infra-docker/compose.yml up --build -d
+
+    echo "🧹 Limpiando imágenes residuales del contenedor actualizado..."
+    docker image prune -f
+
     echo "✅ ¡Todo listo! Accede a Eureka para comprobarlo usando: http://localhost:8761"
 else
     echo "❌ Error: La compilación falló. Revisa los logs arriba."

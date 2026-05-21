@@ -25,7 +25,7 @@ public class CotizacionService {
     private final BuildingClient buildingClient;
 
     // CREAR
-    @Transactional // Agregado para asegurar la consistencia transaccional de las llamadas distribuidas
+    @Transactional // Agregado para asegurar la consistency transaccional de las llamadas distribuidas
     public Cotizacion crearCotizacion(Cotizacion cotizacion) {
         if (cotizacion.getId() != null && cotizacionRepository.existsById(cotizacion.getId())) {
             throw new EntityConflictException("Ya existe una cotización con este ID");
@@ -79,7 +79,8 @@ public class CotizacionService {
     // ELIMINAR
     @Transactional
     public void eliminarCotizacion(Long id) {
-        if (!roleRepository.existsById(id)) {
+        // 🟢 CORRECCIÓN: Se cambió 'roleRepository' por 'cotizacionRepository' para apuntar al repositorio local correcto.
+        if (!cotizacionRepository.existsById(id)) {
             throw new EntityNotFoundException("No se encontró la cotización a eliminar.");
         }
         cotizacionRepository.deleteById(id);

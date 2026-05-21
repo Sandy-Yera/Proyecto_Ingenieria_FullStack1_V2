@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Nombre: compile-only.sh
+# Objetivo: Compilar uno o varios servicios específicos y resetear sus entornos de forma aislada.
+
 # 1. Limpieza de formatos (CRLF -> LF)
 sed -i 's/\r$//' build-project.sh
 sed -i 's/\r$//' compile-only.sh
@@ -12,79 +15,87 @@ chmod +x compile-all.sh
 MAVEN_CACHE_DIR="$HOME/.m2"
 mkdir -p "$MAVEN_CACHE_DIR"
 
-echo "🚀 Iniciando compilación aislada en Docker..."
+# --- DETECCIÓN DE MODO (GENERAL VS SELECCIONADO) ---
+if [ $# -gt 0 ]; then
+    echo "🎯 Modo selectivo activo. Procesando servicios: $@"
+else
+    echo "⚡ Modo general activo. Se encenderá todo el ecosistema sin recompilar."
+fi
 
-# 3. Ejecución de la compilación
+# 3. Ejecución de la compilación en Docker
+# 🟢 CAMBIO CRÍTICO: Pasamos "$@" para enviarle TODOS los argumentos recibidos a compile-all.sh
 MSYS_NO_PATHCONV=1 docker run --rm -it \
     -v "$(pwd)":/app \
     -v "$MAVEN_CACHE_DIR":/root/.m2 \
     -w /app \
     maven:3.9.6-eclipse-temurin-21 \
-    sh compile-all.sh "$1"
+    sh compile-all.sh "$@"
 
-# Guardamos el resultado de la compilación
 COMPILE_STATUS=$?
 
 # 4. Procesamiento post-compilación (Limpieza de BD y Despliegue)
 if [ $COMPILE_STATUS -eq 0 ]; then
     echo "✅ Compilación exitosa."
     
-    # 🟢 SOLUCIÓN BAJO 4: Centralización de variables de entorno del script.
-    # Extraemos el cálculo de CLEAN_NAME al inicio del bloque global para que esté
-    # disponible de forma transparente para la base de datos Y para el Docker Compose.
-    CLEAN_NAME=""
-    if [ -n "$1" ]; then
-        CLEAN_NAME=$(basename "$1")
-    fi
-    
-    # --- RESETEO INTELIGENTE DE BASE DE DATOS ---
-    if [ -n "$CLEAN_NAME" ]; then
-        # Filtramos componentes de infraestructura que no usan base de datos de negocio
-        if [[ "$CLEAN_NAME" != *"server"* && "$CLEAN_NAME" != *"gateway"* ]]; then
+    # Lista donde acumularemos los nombres de los servicios para Docker Compose
+    COMPOSE_SERVICES=""
+    NEED_DATABASE_PAUSE=false
+
+    # 🟢 BUCLE MÁGICO: Iteramos sobre cada uno de los argumentos proporcionados
+    if [ $# -gt 0 ]; then
+        for ARG in "$@"; do
+            CLEAN_NAME=$(basename "$ARG")
             
-            # Eliminamos el prefijo 'ms-' (ej: ms-users -> users)
-            DB_SUFFIX=${CLEAN_NAME#ms-}
-            
-            # 🚨 CASO ESPECIAL: Ajustamos la excepción detectada en tu init.sql (purchase -> purchases)
-            if [ "$DB_SUFFIX" = "purchase" ]; then
-                DB_SUFFIX="purchases"
+            # Saltamos componentes de infraestructura para la base de datos
+            if [[ "$CLEAN_NAME" != *"server"* && "$CLEAN_NAME" != *"gateway"* ]]; then
+                
+                # Eliminamos el prefijo 'ms-' (ej: ms-users -> users)
+                DB_SUFFIX=${CLEAN_NAME#ms-}
+                
+                # Caso especial de pluralización en base de datos
+                if [ "$DB_SUFFIX" = "purchase" ]; then
+                    DB_SUFFIX="purchases"
+                fi
+                
+                DB_NAME="db_service_${DB_SUFFIX}"
+                
+                echo "💥 Destruyendo y recreando base de datos para $CLEAN_NAME: $DB_NAME ..."
+                
+                docker exec -i logistica-mysql mysql -uroot -proot -e \
+                    "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\`;"
+                
+                if [ $? -eq 0 ]; then
+                    echo "✨ Base de datos '${DB_NAME}' reseteada con éxito."
+                    NEED_DATABASE_PAUSE=true
+                else
+                    echo "⚠️  Advertencia: No se pudo resetear la BD para $CLEAN_NAME."
+                fi
             fi
             
-            DB_NAME="db_service_${DB_SUFFIX}"
-            
-            echo "🧹 Detectado modo aislado para: $CLEAN_NAME"
-            echo "💥 Destruyendo y recreando base de datos: $DB_NAME ..."
-            
-            # 🔍 CORRECCIÓN: Apuntamos al nombre real del contenedor 'logistica-mysql'
-            docker exec -i logistica-mysql mysql -uroot -proot -e \
-                "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\`;"
-            
-            if [ $? -eq 0 ]; then
-                echo "✨ Base de datos '${DB_NAME}' reseteada con éxito. Hibernate la inicializará limpia."
-            else
-                echo "⚠️  Advertencia: No se pudo resetear la BD (Comprueba los accesos expuestos arriba)."
-            fi
-            
-            # ⏱️ Pausa estratégica de 5 segundos para alcanzar a leer el resultado en la consola
-            echo "⏱️  ESPERANDOOOOO 5 segundos antes de levantar el contenedor..."
+            # Acumulamos el nombre del contenedor correspondiente para usarlo en el Docker Compose final
+            COMPOSE_SERVICES="$COMPOSE_SERVICES brm-${CLEAN_NAME}"
+        done
+        
+        # Pausa estratégica agrupada si se reseteó alguna base de datos
+        if [ "$NEED_DATABASE_PAUSE" = true ]; then
+            echo "⏱️  ESPERANDOOOOO 5 segundos para que MySQL asimile los cambios..."
             sleep 5
         fi
     fi
-    # ---------------------------------------------
 
-    # --- ACTUALIZACIÓN INTELIGENTE Y AISLADA DE DOCKER COMPOSE ---
-    # 🟢 Ahora lee CLEAN_NAME de forma segura e independiente de lo que pase arriba
-    if [ -n "$CLEAN_NAME" ] && [[ "$CLEAN_NAME" != *"server"* && "$CLEAN_NAME" != *"gateway"* ]]; then
-        # Traducimos el nombre del parámetro al nombre del servicio en el compose.yml
-        SERVICE_CONTAINER_NAME="brm-${CLEAN_NAME}"
-        
-        echo "🔄 Modo aislado activo en Docker: Actualizando SOLO el contenedor [ $SERVICE_CONTAINER_NAME ]..."
-        docker-compose -f docker/infra-docker/compose.yml up --build -d "$SERVICE_CONTAINER_NAME"
+    # --- ACTUALIZACIÓN INTELIGENTE DE DOCKER COMPOSE ---
+    if [ -n "$COMPOSE_SERVICES" ]; then
+        # MODO SELECCIONADO: Levanta y RECONSTRUYE (--build) únicamente los servicios pasados por parámetro
+        echo "🔄 Reconstruyendo en Docker los contenedores seleccionados: [$COMPOSE_SERVICES ]..."
+        docker-compose -f docker/infra-docker/compose.yml up --build -d $COMPOSE_SERVICES
     else
-        # Si se corrió sin argumentos o es infraestructura, actualiza todo normalmente
-        echo "🔄 Actualizando todo el ecosistema de contenedores..."
-        docker-compose -f docker/infra-docker/compose.yml up --build -d
+        # MODO GENERAL: Si se corrió sin argumentos, solo enciende lo que ya exista de forma instantánea sin --build
+        echo "⚡ Encendiendo todo el ecosistema de contenedores de forma ultra veloz..."
+        docker-compose -f docker/infra-docker/compose.yml up -d
     fi
+
+    echo "🧹 Limpiando imágenes residuales del contenedor actualizado..."
+    docker image prune -f
 
     echo "✨ ¡Listo! Verifica en http://localhost:8761"
 else

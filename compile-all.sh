@@ -34,44 +34,67 @@ services/ms-purchase
 services/ms-price-engine
 "
 
-# --- DETECCIÓN DINÁMICA DE ARGUMENTOS ---
-# Si se pasa un argumento, filtramos la lista para aislar el microservicio
+# --- DETECCIÓN DINÁMICA DE ARGUMENTOS (SOPORTE MULTI-SERVICIO POSIX) ---
 if [ -n "$1" ]; then
-    MATCHED_SERVICE=""
-    for CURRENT in $SERVICES; do
-        # Compara si el argumento es igual al nombre de la carpeta o a la ruta completa
-        case "$CURRENT" in
-            *"$1"*) MATCHED_SERVICE="$CURRENT" ;;
-        esac
+    MATCHED_SERVICES=""
+    
+    # Recorremos cada uno de los argumentos recibidos ($@)
+    for ARG in "$@"; do
+        for CURRENT in $SERVICES; do
+            case "$CURRENT" in
+                *"$ARG"*) 
+                    # Verificación de duplicados compatible con 'sh' puro sin usar grep
+                    ALREADY_ADDED=false
+                    for MATCH in $MATCHED_SERVICES; do
+                        if [ "$MATCH" = "$CURRENT" ]; then
+                            ALREADY_ADDED=true
+                        fi
+                    done
+                    
+                    if [ "$ALREADY_ADDED" = false ]; then
+                        MATCHED_SERVICES="$MATCHED_SERVICES $CURRENT"
+                    fi
+                    ;;
+            esac
+        done
     done
 
-    if [ -n "$MATCHED_SERVICE" ]; then
-        SERVICES="$MATCHED_SERVICE"
-        printf "${YELLOW}🎯 Modo aislado activo: Se compilará únicamente [ $SERVICES ]${NC}\n"
+    if [ -n "$MATCHED_SERVICES" ]; then
+        SERVICES="$MATCHED_SERVICES"
+        printf "${YELLOW}🎯 Modo aislado activo: Se compilarán únicamente [ $SERVICES ]${NC}\n"
     else
-        printf "${RED}❌ Error: El servicio '$1' no coincide con ninguna ruta válida en el proyecto.${NC}\n"
+        printf "${RED}❌ Error: Ninguno de los argumentos ingresados coincide con una ruta válida.${NC}\n"
         exit 1
     fi
 else
-    printf "${GREEN}Iniciando compilación masiva de microservicios (Limpieza y Empaquetado)...${NC}\n"
+    printf "${GREEN}Iniciación de compilación masiva de microservicios (Limpieza y Empaquetado)...${NC}\n"
 fi
-# ----------------------------------------
+# ------------------------------------------------------------------
+
+# 📊 CÁLCULO DEL TOTAL DE SERVICIOS A COMPILAR
+TOTAL_SERVICIOS=0
+for S in $SERVICES; do
+    TOTAL_SERVICIOS=$((TOTAL_SERVICIOS + 1))
+done
+
+# Inicializamos el contador de ejecución
+CONTADOR_ACTUAL=0
 
 for SERVICE in $SERVICES; do
+    CONTADOR_ACTUAL=$((CONTADOR_ACTUAL + 1))
+    
     printf "${GREEN}----------------------------------------------------${NC}\n"
-    printf "${GREEN}Compilando: $SERVICE...${NC}\n"
+    printf "${GREEN}Compilando [${CONTADOR_ACTUAL}/${TOTAL_SERVICIOS}]: $SERVICE...${NC}\n"
     printf "${GREEN}----------------------------------------------------${NC}\n"
     
-    # Verificamos si el directorio existe antes de entrar
     if [ -d "$SERVICE" ]; then
         cd "$SERVICE" || exit
         
-        # mvn clean: Borra la carpeta /target (descompila lo viejo)
+        # mvn clean: Borra la carpeta /target
         # package: Genera el nuevo .jar
-        # -DskipTests: Salta los tests para que la compilación sea veloz
-        # Usamos mvn directamente porque el contenedor ya lo tiene instalado
+        # -DskipTests: Salta los tests para velocidad
         if mvn clean package -DskipTests; then
-            printf "${GREEN}✅ Exito en $SERVICE${NC}\n"
+            printf "${GREEN}✅ Éxito en $SERVICE [${CONTADOR_ACTUAL}/${TOTAL_SERVICIOS}]${NC}\n"
         else
             printf "${RED}❌ Error compilando $SERVICE. Abortando.${NC}\n"
             exit 1
@@ -85,5 +108,5 @@ done
 
 printf "${GREEN}----------------------------------------------------${NC}\n"
 printf "${GREEN}¡Todos los servicios requeridos han sido compilados con éxito!${NC}\n"
-printf "${GREEN}Ya puedes ejecutar: docker-compose up --build -d${NC}\n"
+printf "${GREEN}Ya puedes ejecutar tus herramientas de despliegue.${NC}\n"
 printf "${GREEN}----------------------------------------------------${NC}\n"
