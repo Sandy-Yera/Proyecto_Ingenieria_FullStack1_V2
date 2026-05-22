@@ -50,11 +50,6 @@ spring:
           predicates:
             - Path=/api/vehiculos/**
 
-# El bloque de Eureka se hereda del global (application.yml), pero mantenemos lo específico del host de red
-eureka:
-  instance:
-    hostname: brm-api-gateway
-
 # Monitoreo Actuator para verificación de mallas distribuidas
 management:
   endpoints:

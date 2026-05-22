@@ -10,7 +10,6 @@ YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
 # Lista de rutas (Se agregan separadas por espacio)
-# Adaptado para ser compatible con el entorno Docker (sh/dash)
 SERVICES="
 infraestructure/eureka-server
 infraestructure/config-server 
@@ -38,12 +37,10 @@ services/ms-price-engine
 if [ -n "$1" ]; then
     MATCHED_SERVICES=""
     
-    # Recorremos cada uno de los argumentos recibidos ($@)
     for ARG in "$@"; do
         for CURRENT in $SERVICES; do
             case "$CURRENT" in
                 *"$ARG"*) 
-                    # Verificación de duplicados compatible con 'sh' puro sin usar grep
                     ALREADY_ADDED=false
                     for MATCH in $MATCHED_SERVICES; do
                         if [ "$MATCH" = "$CURRENT" ]; then
@@ -61,7 +58,7 @@ if [ -n "$1" ]; then
 
     if [ -n "$MATCHED_SERVICES" ]; then
         SERVICES="$MATCHED_SERVICES"
-        printf "${YELLOW}🎯 Modo aislado activo: Se compilarán únicamente [ $SERVICES ]${NC}\n"
+        printf "${YELLOW}🎯 Modo aislado activo: Se procesarán únicamente [ $SERVICES ]${NC}\n"
     else
         printf "${RED}❌ Error: Ninguno de los argumentos ingresados coincide con una ruta válida.${NC}\n"
         exit 1
@@ -77,27 +74,37 @@ for S in $SERVICES; do
     TOTAL_SERVICIOS=$((TOTAL_SERVICIOS + 1))
 done
 
-# Inicializamos el contador de ejecución
 CONTADOR_ACTUAL=0
 
 for SERVICE in $SERVICES; do
     CONTADOR_ACTUAL=$((CONTADOR_ACTUAL + 1))
     
     printf "${GREEN}----------------------------------------------------${NC}\n"
-    printf "${GREEN}Compilando [${CONTADOR_ACTUAL}/${TOTAL_SERVICIOS}]: $SERVICE...${NC}\n"
+    printf "${GREEN}Procesando [${CONTADOR_ACTUAL}/${TOTAL_SERVICIOS}]: $SERVICE...${NC}\n"
     printf "${GREEN}----------------------------------------------------${NC}\n"
     
     if [ -d "$SERVICE" ]; then
         cd "$SERVICE" || exit
         
-        # mvn clean: Borra la carpeta /target
-        # package: Genera el nuevo .jar
-        # -DskipTests: Salta los tests para velocidad
-        if mvn clean package -DskipTests; then
-            printf "${GREEN}✅ Éxito en $SERVICE [${CONTADOR_ACTUAL}/${TOTAL_SERVICIOS}]${NC}\n"
+        # OPTIMIZACIÓN 2026: ms-buildings y ms-staff se compilan dentro de Docker (Multi-Stage).
+        # No necesitamos generar el .jar localmente, reduciendo drásticamente el tiempo del script.
+        if [ "$SERVICE" = "services/ms-buildings" ] || [ "$SERVICE" = "services/ms-staff" ]; then
+            printf "${YELLOW}⚡ $SERVICE usa compilación interna en Docker (Multi-Stage).${NC}\n"
+            printf "${YELLOW}🧼 Ejecutando únicamente limpieza local preventiva...${NC}\n"
+            if mvn clean; then
+                printf "${GREEN}✅ Limpieza completada para $SERVICE [${CONTADOR_ACTUAL}/${TOTAL_SERVICIOS}]${NC}\n"
+            else
+                printf "${RED}❌ Error en limpieza de $SERVICE. Abortando.${NC}\n"
+                exit 1
+            fi
         else
-            printf "${RED}❌ Error compilando $SERVICE. Abortando.${NC}\n"
-            exit 1
+            # Compilación estándar obligatoria para imágenes basadas puramente en JRE Runtime
+            if mvn clean package -DskipTests; then
+                printf "${GREEN}✅ Éxito en empaquetado de $SERVICE [${CONTADOR_ACTUAL}/${TOTAL_SERVICIOS}]${NC}\n"
+            else
+                printf "${RED}❌ Error compilando $SERVICE. Abortando.${NC}\n"
+                exit 1
+            fi
         fi
         
         cd - > /dev/null
@@ -107,6 +114,6 @@ for SERVICE in $SERVICES; do
 done
 
 printf "${GREEN}----------------------------------------------------${NC}\n"
-printf "${GREEN}¡Todos los servicios requeridos han sido compilados con éxito!${NC}\n"
+printf "${GREEN}¡Todos los servicios requeridos han sido procesados con éxito!${NC}\n"
 printf "${GREEN}Ya puedes ejecutar tus herramientas de despliegue.${NC}\n"
 printf "${GREEN}----------------------------------------------------${NC}\n"

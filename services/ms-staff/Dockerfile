@@ -1,28 +1,51 @@
-# Fase 1: Compilación limpia en entorno aislado
-FROM maven:3.9.6-eclipse-temurin-21 AS build
+# ========================================================
+# Etapa 1: Descarga de dependencias (Cacheable)
+# ========================================================
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS deps
 WORKDIR /app
 
-# Copiar el archivo de configuración de dependencias
+# Copiamos ÚNICAMENTE el pom.xml para congelar las dependencias en la caché
 COPY pom.xml .
 
-# Descargar dependencias para guardarlas en caché de Docker
+# Descargamos las dependencias en modo offline
 RUN mvn dependency:go-offline -B
 
-# Copiar el código fuente del microservicio
-COPY src ./src
-
-# Compilar omitiendo los tests para acelerar el despliegue del laboratorio
-RUN mvn clean package -DskipTests
-
-# Fase 2: Imagen final de ejecución ligera
-FROM eclipse-temurin:21-jre-jammy
+# ========================================================
+# Etapa 2: Compilación y empaquetado (Builder)
+# ========================================================
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /app
 
-# Copiar el empaquetado .jar generado en la fase anterior
-COPY --from=build /app/target/ms-staff-0.0.1-SNAPSHOT.jar app.jar
+# Reutilizamos las dependencias pre-descargadas de la etapa anterior
+COPY --from=deps /root/.m2 /root/.m2
+COPY --from=deps /app /app
 
-# Exponer el puerto de la serie correlativa asignado a este servicio
+# Copiamos el código fuente de staff
+COPY src ./src
+
+# Compilamos el JAR final
+RUN mvn package -DskipTests -B
+
+# ========================================================
+# Etapa 3: Imagen de ejecución ultra-ligera y segura (Runner)
+# ========================================================
+FROM eclipse-temurin:21-jre-alpine AS runner
+WORKDIR /app
+
+# Hardening de Seguridad: Creamos el usuario de sistema 'brm' sin privilegios
+RUN addgroup -S brm && adduser -S brm -G brm
+
+# CORRECCIÓN: Copiamos usando comodín (*.jar) para desacoplarlo de la versión exacta del pom.xml
+COPY --from=builder /app/target/*.jar app.jar
+
+# Cambiamos la propiedad de los archivos al usuario seguro
+RUN chown -R brm:brm /app
+
+# Cambiamos al contexto no-root
+USER brm
+
+# Exponemos el puerto correlativo real asignado a staff
 EXPOSE 8085
 
-# Comando de arranque del microservicio con optimización de memoria
+# Comando seguro de ejecución
 ENTRYPOINT ["java", "-jar", "app.jar"]

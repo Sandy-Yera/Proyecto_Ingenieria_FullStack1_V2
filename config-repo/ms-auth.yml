@@ -23,10 +23,6 @@ spring:
         retry.backoff.ms: 1000
         max.block.ms: 5000
 
-eureka:
-  instance:
-    prefer-ip-address: true
-
 management:
   endpoints:
     web:

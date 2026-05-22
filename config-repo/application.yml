@@ -2,10 +2,9 @@
 eureka:
   client:
     serviceUrl:
-      defaultZone: http://eureka-server:8761/eureka/
+      defaultZone: http://logistica-eureka:8761/eureka/
   instance:
-    # Crucial para Docker: usa la IP en lugar del nombre del contenedor
-    prefer-ip-address: true
+    prefer-ip-address: false # Para que use el nombre del servicio
 
 # 🟢 NUEVO: Configuración global de Resiliencia para llamadas HTTP con Feign
 feign:
