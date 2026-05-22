@@ -7,6 +7,14 @@ eureka:
     # Crucial para Docker: usa la IP en lugar del nombre del contenedor
     prefer-ip-address: true
 
+# 🟢 NUEVO: Configuración global de Resiliencia para llamadas HTTP con Feign
+feign:
+  client:
+    config:
+      default: # Aplica a todos los Feign Clients del ecosistema
+        connectTimeout: 2000 # 2 segundos máximo para establecer la conexión TCP
+        readTimeout: 5000 # 5 segundos máximo para esperar la respuesta del servidor
+
 spring:
   kafka:
     # Centralizamos Kafka aquí para que Service-Log y otros lo hereden de una vez
@@ -15,4 +23,4 @@ spring:
 logging:
   level:
     root: INFO
-    com.logistica: DEBUG  # Muestra tus controladores y servicios de todos los MS de forma segura
+    com.logistica: DEBUG # Muestra tus controladores y servicios de todos los MS de forma segura

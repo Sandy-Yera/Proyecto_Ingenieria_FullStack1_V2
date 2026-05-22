@@ -25,6 +25,21 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
+# 🟢 NUEVO: Tolerancia a fallos distribuida para proteger la red de ms-quotes
+resilience4j:
+  circuitbreaker:
+    instances:
+      default: # Aplica de forma automática a tus clientes OpenFeign (UserClient y BuildingClient)
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10 # Evalúa la salud basándose en las últimas 10 llamadas
+        minimumNumberOfCalls: 5 # Mínimo de llamadas requeridas antes de calcular porcentajes
+        failureRateThreshold: 50 # Abre el circuito si el 50% o más de las llamadas fallan (HTTP 5xx / Timeouts)
+        slowCallRateThreshold: 50 # Abre el circuito si el 50% o más de las llamadas son lentas
+        slowCallDurationThreshold: 3000ms # Considera "lenta" cualquier llamada que supere los 3 segundos
+        waitDurationInOpenState: 15000ms # Al abrirse, congela las llamadas por 15 segundos para dar respiro al servicio caído
+        permittedNumberOfCallsInHalfOpenState: 3 # Permite 3 llamadas de prueba al pasar a estado Semi-Abierto
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
 management:
   endpoints:
     web:
@@ -38,7 +53,7 @@ management:
 logging:
   level:
     root: INFO
-    com.logistica: DEBUG  # Rastrea la lógica matemática y algoritmos de tus cotizaciones
+    com.logistica: DEBUG # Rastrea la lógica matemática y algoritmos de tus cotizaciones
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.hibernate.orm.results.graph.AST: TRACE

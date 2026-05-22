@@ -8,8 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.logistica.ms_quotes.client.BuildingClient; 
 import com.logistica.ms_quotes.client.UserClient;     
-import com.logistica.ms_quotes.dto.CotizacionRequestDTO;  // 🟢 Import Request DTO
-import com.logistica.ms_quotes.dto.CotizacionResponseDTO; // 🟢 Import Response DTO
+import com.logistica.ms_quotes.dto.CotizacionRequestDTO;  
+import com.logistica.ms_quotes.dto.CotizacionResponseDTO; 
 import com.logistica.ms_quotes.exception.entity.EntityBadRequestException;
 import com.logistica.ms_quotes.exception.entity.EntityConflictException;
 import com.logistica.ms_quotes.exception.entity.EntityNotFoundException;
@@ -17,7 +17,7 @@ import com.logistica.ms_quotes.model.Cotizacion;
 import com.logistica.ms_quotes.repository.CotizacionRepository;
 
 @Service
-@Transactional(readOnly = true) // 🟢 Mantiene optimización de lectura de la Etapa 2
+@Transactional(readOnly = true) 
 public class CotizacionService {
 
     private final CotizacionRepository cotizacionRepository;
@@ -37,20 +37,24 @@ public class CotizacionService {
 
     // CREAR (Paso 1: Fuera de la Transacción - Sin retener conexiones Hikari)
     public CotizacionResponseDTO crearCotizacion(CotizacionRequestDTO dto) {
-        // 1. Validación remota del Usuario en ms-users via OpenFeign
+        // 1. Validación remota del Usuario en ms-users via OpenFeign con Excepciones Tipificadas
         try {
             userClient.obtenerUsuarioPorId(dto.getUserId());
-        } catch (Exception e) {
+        } catch (feign.FeignException.NotFound e) { // 🟢 Específico: El usuario realmente no existe (HTTP 404)
             throw new EntityNotFoundException("No se puede crear la cotización. El Usuario con ID " 
                     + dto.getUserId() + " no existe en el sistema.");
+        } catch (feign.FeignException e) { // 🟢 Genérico de Feign: Caídas de red, Timeouts, HTTP 500
+            throw new EntityBadRequestException("Error de comunicación remota con ms-users: " + e.getMessage());
         }
 
-        // 2. Validación remota del Edificio en ms-buildings via OpenFeign
+        // 2. Validación remota del Edificio en ms-buildings via OpenFeign con Excepciones Tipificadas
         try {
-            buildingClient.obtenerEdificioPorId(dto.getBuildingId());
-        } catch (Exception e) {
+            buildingClient.obtenerEdificioPorId(dto.getBuildingId()); // 🟢 Corrección del nombre del método corregido en el cliente
+        } catch (feign.FeignException.NotFound e) { // 🟢 Específico: El edificio realmente no existe (HTTP 404)
             throw new EntityNotFoundException("No se puede crear la cotización. El Edificio con ID " 
                     + dto.getBuildingId() + " no existe en el sistema.");
+        } catch (feign.FeignException e) { // 🟢 Genérico de Feign: Caídas de red, Timeouts, HTTP 500
+            throw new EntityBadRequestException("Error de comunicación remota con ms-buildings: " + e.getMessage());
         }
 
         // Mapear de Request DTO a Entidad antes de entrar a la transacción
@@ -113,7 +117,7 @@ public class CotizacionService {
         cotizacionRepository.deleteById(id);
     }
 
-    // 🟢 MÉTODOS AUXILIARES DE CONVERSIÓN (Mappers manuales)
+    // MÉTODOS AUXILIARES DE CONVERSIÓN (Mappers manuales)
     private CotizacionResponseDTO convertToResponseDTO(Cotizacion cotizacion) {
         CotizacionResponseDTO dto = new CotizacionResponseDTO();
         dto.setId(cotizacion.getId());
