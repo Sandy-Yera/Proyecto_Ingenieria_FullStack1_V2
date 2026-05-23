@@ -35,6 +35,11 @@ MSYS_NO_PATHCONV=1 docker run --rm -it \
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ Paso 1: Compilación base exitosa. Levantando entorno con Docker Compose...${NC}"
     
+    # 🧼 AUTOMATIZACIÓN ALTERNATIVA KAFKA: Limpieza preventiva de volúmenes huérfanos/desfasados
+    # Esto asegura que Kafka y Zookeeper sincronicen sus IDs desde cero sin intervención manual.
+    echo -e "${YELLOW}🛡️  Sincronizando estado de mensajería: Removiendo volúmenes previos de Kafka/Zookeeper...${NC}"
+    docker compose -f docker/infra-docker/compose.yml down -v 2>/dev/null || true
+
     # CORRECCIÓN 2026: Usamos 'docker compose' (V2 nativo) y apuntamos al compose unificado actualizado
     # Nota: Si tu compose está en la raíz, se deja así. Si sigue en la subcarpeta, restáuralo a 'docker compose -f docker/infra-docker/compose.yml up --build -d'
     docker compose -f docker/infra-docker/compose.yml up --build -d

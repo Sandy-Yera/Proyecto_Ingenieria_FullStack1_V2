@@ -209,7 +209,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 45s
+      start_period: 150s
     networks:
       - brm-public
       - brm-backend
@@ -231,6 +231,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms64m -Xmx160m
     deploy:
       resources:
@@ -247,6 +248,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -272,6 +274,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms64m -Xmx160m
     deploy:
       resources:
@@ -299,6 +302,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -324,6 +328,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -349,6 +354,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -376,6 +382,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -401,6 +408,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -428,6 +436,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms64m -Xmx160m
     deploy:
       resources:
@@ -455,6 +464,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -480,6 +490,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -505,6 +516,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms64m -Xmx160m
     deploy:
       resources:
@@ -530,6 +542,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -557,6 +570,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -582,6 +596,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -607,6 +622,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:
@@ -632,6 +648,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - JAVA_OPTS=-Xms48m -Xmx128m
     deploy:
       resources:

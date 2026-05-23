@@ -109,7 +109,14 @@ if [ $COMPILE_STATUS -eq 0 ]; then
         echo -e "${YELLOW}🔄 Reconstruyendo en Docker los contenedores seleccionados: [$COMPOSE_SERVICES ]...${NC}"
         docker compose -f docker/infra-docker/compose.yml up --build -d $COMPOSE_SERVICES
     else
-        # MODO GENERAL: Si se corrió sin argumentos, solo enciende lo que ya exista de forma instantánea sin --build
+        # MODO GENERAL: Verificación inteligente preventiva de desincronización de clúster Kafka
+        KAFKA_STATUS=$(docker inspect -f '{{.State.Status}}' brm-kafka 2>/dev/null)
+        
+        if [ "$KAFKA_STATUS" = "exited" ] || [ "$KAFKA_STATUS" = "unhealthy" ]; then
+            echo -e "${YELLOW}⚠️  Se detectó anomalía o parada forzada en Kafka. Ejecutando resincronización preventiva de IDs...${NC}"
+            docker compose -f docker/infra-docker/compose.yml down -v 2>/dev/null || true
+        fi
+
         echo -e "${GREEN}⚡ Encendiendo todo el ecosistema de contenedores de forma ultra veloz...${NC}"
         docker compose -f docker/infra-docker/compose.yml up -d
     fi
