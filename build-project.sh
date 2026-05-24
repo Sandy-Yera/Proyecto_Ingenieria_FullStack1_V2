@@ -41,7 +41,6 @@ if [ $? -eq 0 ]; then
     docker compose -f docker/infra-docker/compose.yml down -v 2>/dev/null || true
 
     # CORRECCIÓN 2026: Usamos 'docker compose' (V2 nativo) y apuntamos al compose unificado actualizado
-    # Nota: Si tu compose está en la raíz, se deja así. Si sigue en la subcarpeta, restáuralo a 'docker compose -f docker/infra-docker/compose.yml up --build -d'
     docker compose -f docker/infra-docker/compose.yml up --build -d
 
     echo -e "${YELLOW}🧹 Limpiando imágenes intermedias residuales (dangling)...${NC}"

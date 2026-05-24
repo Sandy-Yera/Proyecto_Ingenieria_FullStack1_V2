@@ -1,23 +1,23 @@
-# Usamos la imagen base ultra-ligera de Java 21 sobre Alpine
+# ==========================================
+# ETAPA ÚNICA: Runtime Seguro y Limpio (Runner)
+# ==========================================
 FROM eclipse-temurin:21-jre-alpine
-
-# Definimos el directorio de trabajo canónico
 WORKDIR /app
 
-# Hardening de Seguridad: Creamos el usuario de sistema 'brm' sin privilegios
+# Creamos usuario y grupo sin privilegios por seguridad
 RUN addgroup -S brm && adduser -S brm -G brm
 
-# Copiamos el JAR pre-compilado directamente dentro de /app
+# Copiamos el JAR directamente desde la carpeta target y lo renombramos
 COPY target/*.jar app.jar
 
-# Cambiamos la propiedad de los archivos al usuario seguro
+# Asignamos los permisos correspondientes al usuario brm
 RUN chown -R brm:brm /app
 
-# Cambiamos al contexto no-root de forma segura
+# Cambiamos al usuario sin privilegios
 USER brm
 
-# Exponemos el puerto interno real del servicio de logs
+# Exponemos el puerto (Asegúrate de cambiar esto en los otros microservicios)
 EXPOSE 8082
 
-# Comando seguro de ejecución
+# Arrancamos usando el archivo JAR directamente, sin el flag de CDS
 ENTRYPOINT ["java", "-jar", "app.jar"]

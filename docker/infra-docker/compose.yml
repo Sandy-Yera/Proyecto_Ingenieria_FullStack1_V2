@@ -22,6 +22,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 60s
 
   adminer:
     image: adminer
@@ -68,7 +69,7 @@ services:
       interval: 10s
       timeout: 2s
       retries: 5
-      start_period: 5s
+      start_period: 30s
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -112,7 +113,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms96m -Xmx160m # Reducido: Solo gestiona mapeos de nombres en memoria
+      - JAVA_TOOL_OPTIONS=-Xms96m -Xmx160m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom # Reducido y asegurado
     deploy:
       resources:
         limits:
@@ -134,6 +135,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 45s
 
   config-server:
     build: ../../infraestructure/config-server
@@ -147,7 +149,7 @@ services:
       - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=file:/app/config-repo/
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://logistica-eureka:8761/eureka/
       - SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms96m -Xmx160m # Reducido: Lee archivos planos locales, no requiere gran procesamiento
+      - JAVA_TOOL_OPTIONS=-Xms96m -Xmx160m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom # Reducido y asegurado
     deploy:
       resources:
         limits:
@@ -155,11 +157,8 @@ services:
     depends_on:
       eureka-server:
         condition: service_healthy
-    ports:
-      - "8888:8888"
     networks:
       - brm-backend
-      - brm-public
     healthcheck:
       # CORRECCIÓN ALPINE: Se cambia curl por wget nativo de BusyBox
       test:
@@ -174,6 +173,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 45s
 
   api-gateway:
     build: ../../infraestructure/api-gateway
@@ -185,7 +185,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms128m -Xmx224m # El gateway procesa reactivamente los flujos de entrada; requiere un poco más
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx224m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -232,7 +232,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms64m -Xmx160m
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx160m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -249,7 +249,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -275,7 +275,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms64m -Xmx160m
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx160m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -303,7 +303,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -329,7 +329,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -355,7 +355,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -383,7 +383,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -409,7 +409,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -437,7 +437,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms64m -Xmx160m
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx160m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -465,7 +465,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -491,7 +491,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -517,7 +517,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms64m -Xmx160m
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx160m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -543,7 +543,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -571,7 +571,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -597,7 +597,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -623,7 +623,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:
@@ -649,7 +649,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - JAVA_OPTS=-Xms48m -Xmx128m
+      - JAVA_TOOL_OPTIONS=-Xms48m -Xmx128m -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom
     deploy:
       resources:
         limits:

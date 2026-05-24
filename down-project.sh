@@ -73,7 +73,12 @@ else
     if [ "$HARD_RESET" = true ]; then
         echo -e "${RED}⚠️  MODO HARD RESET: Deteniendo ecosistema completo y destruyendo todos los volúmenes persistentes...${NC}"
         docker compose -f $COMPOSE_FILE down -v
-        echo -e "${GREEN}✅ Todo el entorno ha sido destruido por completo de forma segura.${NC}"
+        
+        # 🚀 ADICIÓN DE SEGURIDAD: Limpia la caché pesada de BuildKit
+        echo -e "${YELLOW}🧹 Limpiando caché profunda de construcción (BuildKit)...${NC}"
+        docker builder prune -a -f
+        
+        echo -e "${GREEN}✅ Todo el entorno ha sido destruido y la caché de disco liberada.${NC}"
     else
         echo -e "${YELLOW}🛑 Modo general activo. Apagando todo el ecosistema de contenedores de forma segura...${NC}"
         docker compose -f $COMPOSE_FILE down

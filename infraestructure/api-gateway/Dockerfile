@@ -9,7 +9,7 @@ COPY pom.xml .
 
 # Descargamos las dependencias en modo offline. 
 # Docker cacheará este layer y SOLO se volverá a ejecutar si cambias el pom.xml.
-RUN mvn dependency:go-offline -B
+RUN mvn dependency:go-offline -B -Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.pool=false
 
 # ========================================================
 # Etapa 2: Compilación y empaquetado (Builder)

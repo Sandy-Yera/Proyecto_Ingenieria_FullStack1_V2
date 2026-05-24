@@ -33,6 +33,9 @@ services/ms-purchase
 services/ms-price-engine
 "
 
+
+# Ojo, atento con los dockerfile multi-stage, ver por la linea 92-93 una mención de esto y lógica
+
 # --- DETECCIÓN DINÁMICA DE ARGUMENTOS (SOPORTE MULTI-SERVICIO POSIX) ---
 if [ -n "$1" ]; then
     MATCHED_SERVICES=""
@@ -88,6 +91,7 @@ for SERVICE in $SERVICES; do
         
         # OPTIMIZACIÓN 2026: ms-buildings y ms-staff se compilan dentro de Docker (Multi-Stage).
         # No necesitamos generar el .jar localmente, reduciendo drásticamente el tiempo del script.
+        # ms-logs es multi-stage, pero solo para optimización CDS y capas, por lo que SÍ requiere el .jar previo.
         if [ "$SERVICE" = "services/ms-buildings" ] || [ "$SERVICE" = "services/ms-staff" ]; then
             printf "${YELLOW}⚡ $SERVICE usa compilación interna en Docker (Multi-Stage).${NC}\n"
             printf "${YELLOW}🧼 Ejecutando únicamente limpieza local preventiva...${NC}\n"

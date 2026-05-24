@@ -121,8 +121,8 @@ if [ $COMPILE_STATUS -eq 0 ]; then
         docker compose -f docker/infra-docker/compose.yml up -d
     fi
 
-    echo -e "${YELLOW}🧹 Limpiando imágenes intermedias residuales (dangling)...${NC}"
-    docker image prune -f
+    echo -e "${YELLOW}🧹 Limpiando residuos de Docker...${NC}"
+    docker system prune -f
 
     echo -e "${GREEN}✨ ¡Todo listo! Monitorea el clúster en: http://localhost:8761${NC}"
 else
