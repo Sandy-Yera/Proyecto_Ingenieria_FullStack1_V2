@@ -8,6 +8,7 @@ import com.logistica.user.client.AuthClient;
 import com.logistica.user.dto.UserCredencialRegisterDTO; 
 import com.logistica.user.dto.UserRegisterDTO;
 import com.logistica.user.dto.UserResponseDTO;
+import com.logistica.user.dto.ActualizarUsernameDTO; 
 import com.logistica.user.exception.entity.EntityBadRequestException;
 import com.logistica.user.exception.entity.EntityConflictException;
 import com.logistica.user.exception.entity.EntityNotFoundException;
@@ -24,7 +25,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final KafkaLogProducer logProducer;
     private final AuthClient authClient; 
-    private final HttpServletRequest request; 
+    private final HttpServletRequest request;
+    private final KafkaUserEventProducer userEventProducer; 
 
     @Transactional(readOnly = true)
     public List<UserResponseDTO> listar() {
@@ -34,11 +36,12 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)    
     public Boolean existeUserId(Long id) {
         return userRepository.existsById(id);
     }
 
-    // CORREGIDO: Firma adaptada a String
+    @Transactional(readOnly = true)
     public Boolean existeUserRut(String rut) {
         return userRepository.existsByRut(rut);
     }
@@ -53,7 +56,6 @@ public class UserService {
                 }));
     }
 
-    // CORREGIDO: Firma adaptada a String y logs actualizados
     @Transactional(readOnly = true)
     public UserResponseDTO encontrarUserRut(String rut) {
         String traceId = request.getHeader("X-Trace-Id");
@@ -92,16 +94,13 @@ public class UserService {
             credencialesDTO.setUsername(dto.getCorreo()); 
             credencialesDTO.setPassword(dto.getPassword()); 
 
-            // Llamada síncrona de red
+            // Comunicación síncrona mediante OpenFeign
             authClient.generarCredencialesRemotas(credencialesDTO);
             logProducer.sendLog("INFO", "Credenciales asignadas remotamente en ms-auth para ID: " + generadoId + " | TraceId: " + traceId);
 
         } catch (Exception ex) {
             logProducer.sendLog("ERROR", "Error crítico en el flujo de registro distributivo para ID: " + generadoId + ". Iniciando saga compensatoria de borrado. Detalle: " + ex.getMessage() + " | TraceId: " + traceId);
             
-            // 🟠 SOLUCIÓN ALTO 1 (Saga Compensatoria): 
-            // Si la llamada remota falló a mitad de camino o se produjo un error inmediatamente después, 
-            // forzamos de forma segura un borrado de limpieza en ms-auth para evitar registros fantasmas.
             try {
                 authClient.eliminarCredencialesRemotas(generadoId);
                 logProducer.sendLog("INFO", "Saga compensatoria ejecutada con éxito. Credenciales huérfanas removidas de ms-auth para ID: " + generadoId + " | TraceId: " + traceId);
@@ -109,7 +108,7 @@ public class UserService {
                 logProducer.sendLog("ERROR", "Fallo crítico e irreversible: No se pudo limpiar la credencial huérfana en ms-auth para ID: " + generadoId + ". Se requiere intervención manual. Detalle: " + compensationEx.getMessage() + " | TraceId: " + traceId);
             }
 
-            // Relanzamos la excepción para gatillar el Rollback local automático del guardadoLocal
+            // Lanza la excepción para asegurar el Rollback local automático del perfil guardado
             throw new EntityConflictException("No se pudieron registrar las credenciales de seguridad correctamente. Proceso de registro cancelado de forma segura.");
         }
 
@@ -126,8 +125,6 @@ public class UserService {
                     return new EntityNotFoundException("No se encontró al usuario con la id: " + id);
                 });
 
-        // CORREGIDO: Se remueve la evaluación del DV independiente. Al ser el RUT un String completo, 
-        // se valida la inmutabilidad de la cadena completa directamente.
         if (!dto.getRut().equals(usuarioExistente.getRut())) {
             throw new EntityBadRequestException("El RUT no es un campo modificable por reglas de auditoría.");
         }
@@ -145,21 +142,21 @@ public class UserService {
 
         if (correoCambiado) {
             try {
-                UserCredencialRegisterDTO credencialesDTO = new UserCredencialRegisterDTO();
-                credencialesDTO.setUsername(actualizado.getCorreo());
-                // No enviamos password ya que el nuevo endpoint especializado de ms-auth resguarda la clave existente
+                // 🛠️ AJUSTE DE PRECISIÓN: Instanciación acoplada estrictamente a tu clase DTO real
+                ActualizarUsernameDTO actualizarDTO = new ActualizarUsernameDTO();
+                actualizarDTO.setUsername(actualizado.getCorreo()); // Setter real autogenerado por @Data
 
                 logProducer.sendLog("INFO", "Propagando cambio de Username a ms-auth para el ID: " + id + " | TraceId: " + traceId);
                 
-                // 🚀 ¡SOLUCIÓN CRÍTICO 1!: Se gatilla la llamada de red real vía OpenFeign
-                authClient.actualizarCredencialesRemotas(id, credencialesDTO);
+                // Envío de la carga útil corregida a ms-auth vía OpenFeign
+                authClient.actualizarCredencialesRemotas(id, actualizarDTO);
                 
                 logProducer.sendLog("INFO", "Sincronización de credenciales exitosa en ms-auth para ID: " + id + " | TraceId: " + traceId);
                 
             } catch (Exception ex) {
                 logProducer.sendLog("ERROR", "No se pudo sincronizar el nuevo correo con ms-auth para ID: " + id + ". Detalle: " + ex.getMessage() + " | TraceId: " + traceId);
-                // Lanzamos EntityBadRequestException para forzar de inmediato el Rollback del saveAndFlush local
-                throw new EntityBadRequestException("No se pudo actualizar el perfil debido a un error de sincronización de seguridad con ms-auth. Operación revertida.");
+                // Provoca de inmediato el Rollback local del saveAndFlush si falla la red remota
+                throw new EntityBadRequestException("Error de sincronización de seguridad remota. Operación revertida.");
             }
         }
 
@@ -169,13 +166,18 @@ public class UserService {
     @Transactional
     public void eliminarUserId(Long id) {
         String traceId = request.getHeader("X-Trace-Id");
-        if (!userRepository.existsById(id)) {
-            logProducer.sendLog("WARN", "Intento fallido de eliminar usuario inexistente con ID: " + id + " | TraceId: " + traceId);
-            throw new EntityNotFoundException("No se encontró al usuario con la id: " + id);
-        }
+
+        User usuario = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    logProducer.sendLog("WARN", "Intento de eliminar usuario inexistente ID: " + id + " | TraceId: " + traceId);
+                    return new EntityNotFoundException("No se encontró al usuario con la id: " + id);
+                });
 
         userRepository.deleteById(id);
-        logProducer.sendLog("INFO", "Usuario con ID " + id + " eliminado del sistema de manera definitiva. | TraceId: " + traceId);
+        logProducer.sendLog("INFO", "Usuario ID " + id + " eliminado de ms-users. Evento de cascada publicado a Kafka. | TraceId: " + traceId);
+
+        // Despacho asíncrono al broker de Kafka para el manejo de limpieza reactiva
+        userEventProducer.publishUserDeleted(id, traceId);
     }
 
     @Transactional(readOnly = true)
@@ -190,8 +192,7 @@ public class UserService {
     public UserResponseDTO convertirAResponseDTO(User user) {
         UserResponseDTO response = new UserResponseDTO();
         response.setId(user.getId());
-        response.setRut(user.getRut()); // Asignación directa de String a String
-        // ELIMINADO: response.setDv(...) ya no existe.
+        response.setRut(user.getRut()); 
         response.setPNombre(user.getPNombre());
         response.setSNombre(user.getSNombre());
         response.setApPat(user.getApPat());
@@ -202,8 +203,7 @@ public class UserService {
     }
 
     public User convertirAEntidad(UserRegisterDTO dto, User user) {
-        user.setRut(dto.getRut()); // Asignación directa de String a String
-        // ELIMINADO: user.setDv(...) ya no existe.
+        user.setRut(dto.getRut()); 
         user.setPNombre(dto.getPNombre());
         user.setSNombre(dto.getSNombre());
         user.setApPat(dto.getApPat());

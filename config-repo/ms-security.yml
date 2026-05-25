@@ -17,6 +17,10 @@ spring:
 
   # Mensajería específica para reportar bloqueos o auditoría de tokens JWT
   kafka:
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -34,7 +38,7 @@ management:
 logging:
   level:
     root: INFO
-    com.logistica: DEBUG  # Indispensable para validar la expiración de tokens o accesos denegados
+    com.logistica: DEBUG # Indispensable para validar la expiración de tokens o accesos denegados
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.hibernate.orm.results.graph.AST: TRACE

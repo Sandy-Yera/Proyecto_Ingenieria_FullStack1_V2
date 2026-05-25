@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import com.logistica.user.dto.UserCredencialResponseDTO;
 import com.logistica.user.dto.UserCredencialRegisterDTO;
+import com.logistica.user.dto.ActualizarUsernameDTO;
 
 /**
  * CONTRATO DE COMUNICACIÓN SÍNCRONA (OpenFeign)
@@ -33,7 +34,7 @@ public interface AuthClient {
     @PutMapping("/api/auth/usuario/{userId}")
     ResponseEntity<UserCredencialResponseDTO> actualizarCredencialesRemotas(
             @PathVariable("userId") Long userId, 
-            @RequestBody UserCredencialRegisterDTO dto
+            @RequestBody ActualizarUsernameDTO dto
     );
 
     /**

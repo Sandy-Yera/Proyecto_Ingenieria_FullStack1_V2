@@ -14,15 +14,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.logistica.ms_auth.dto.ActualizarUsernameDTO; // 🟢 NUEVO: Importación del DTO específico de seguridad
+import com.logistica.ms_auth.dto.ActualizarUsernameDTO; 
 import com.logistica.ms_auth.dto.UserCredencialRegisterDTO;
 import com.logistica.ms_auth.dto.UserCredencialResponseDTO;
 import com.logistica.ms_auth.exception.entity.EntityBadRequestException;
 import com.logistica.ms_auth.service.KafkaLogProducer;
 import com.logistica.ms_auth.service.UserCredencialService;
 
+import com.logistica.ms_auth.service.AuthService;
+import com.logistica.ms_auth.dto.LoginRequestDTO;
+import com.logistica.ms_auth.dto.LoginResponseDTO;
+import org.springframework.web.bind.annotation.RequestHeader;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
 
 @RestController
 @RequestMapping("/api/auth")
@@ -31,6 +37,7 @@ public class UserCredencialController {
     
     private final UserCredencialService userCredencialService;
     private final KafkaLogProducer logProducer;
+    private final AuthService authService;
 
     /**
      * --- LISTAR CREDENCIALES ---
@@ -108,5 +115,26 @@ public class UserCredencialController {
     public ResponseEntity<Void> eliminarUserCredencial(@PathVariable Long id) {
         userCredencialService.eliminarUserCredencial(id);
         return ResponseEntity.noContent().build();
+    }
+
+
+    /**
+     * --- Métodos de login JWT ----
+     */
+    // AuthController.java — añadir endpoint de login al UserCredencialController existente
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
+        return ResponseEntity.ok(authService.login(dto));
+    }
+
+    // Endpoint de validación para que el Gateway pueda verificar tokens
+    @GetMapping("/validate")
+    public ResponseEntity<Boolean> validateToken(
+            @RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.ok(false);
+        }
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(authService.validateToken(token));
     }
 }
