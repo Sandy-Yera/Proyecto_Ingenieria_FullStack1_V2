@@ -27,9 +27,9 @@ spring:
         retry.backoff.ms: 1000
         max.block.ms: 5000
 
-  jwt:
-    secret: "BRM-Secret-Key-2024-MustBe256BitsMinimumForHS256AlgorithmSecurity!!"
-    expiration-ms: 3600000 # 1 hora
+jwt:
+  secret: "BRM-Secret-Key-2024-MustBe256BitsMinimumForHS256AlgorithmSecurity!!"
+  expiration-ms: 3600000 # 1 hora
 
 management:
   endpoints:
