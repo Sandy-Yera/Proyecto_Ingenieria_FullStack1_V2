@@ -1,4 +1,4 @@
-package com.logistica.user.service;
+package com.logistica.user.service.impl;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -14,13 +14,16 @@ import com.logistica.user.exception.entity.EntityConflictException;
 import com.logistica.user.exception.entity.EntityNotFoundException;
 import com.logistica.user.model.User;
 import com.logistica.user.repository.UserRepository;
+import com.logistica.user.service.IUserService;
+import com.logistica.user.service.KafkaLogProducer;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
+
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserServiceImplement implements IUserService{
 
     private final UserRepository userRepository;
     private final KafkaLogProducer logProducer;
@@ -212,4 +215,5 @@ public class UserService {
         user.setCorreo(dto.getCorreo());
         return user;
     }
+
 }
