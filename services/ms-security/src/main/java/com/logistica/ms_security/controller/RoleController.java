@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.logistica.ms_security.dto.RoleRequestDTO;  // 🟢 Nuevo: Import Request DTO
 import com.logistica.ms_security.dto.RoleResponseDTO; // 🟢 Nuevo: Import Response DTO
-import com.logistica.ms_security.service.RoleService;
+import com.logistica.ms_security.service.IRoleService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +24,9 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/roles")
 @RequiredArgsConstructor
 public class RoleController {
-    
-    private final RoleService roleService;
-    
+
+    private final IRoleService roleService;
+
     // CREAR
     @PostMapping
     public ResponseEntity<RoleResponseDTO> crearRole(@Valid @RequestBody RoleRequestDTO roleDTO) {

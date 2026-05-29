@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.logistica.ms_security.dto.RoleAssignmentRequestDTO;  // 🟢 Nuevo: Import Request DTO
 import com.logistica.ms_security.dto.RoleAssignmentResponseDTO; // 🟢 Nuevo: Import Response DTO
-import com.logistica.ms_security.service.RoleAssignmentService;
+import com.logistica.ms_security.service.IRoleAssignmentService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RoleAssignmentController {
 
-    private final RoleAssignmentService roleAssignmentService;
+    private final IRoleAssignmentService roleAssignmentService;
 
     // CREAR
     @PostMapping
