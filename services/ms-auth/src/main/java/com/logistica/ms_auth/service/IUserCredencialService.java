@@ -1,0 +1,22 @@
+package com.logistica.ms_auth.service;
+
+import java.util.List;
+
+import com.logistica.ms_auth.dto.UserCredencialRegisterDTO;
+import com.logistica.ms_auth.dto.UserCredencialResponseDTO;
+
+public interface IUserCredencialService {
+    List<UserCredencialResponseDTO> listar();
+
+    UserCredencialResponseDTO crearUserCredencial(UserCredencialRegisterDTO dto);
+
+    Boolean existeUserCredencialId(Long id);
+
+    Boolean existeUserCredencialUsername(String username);
+
+    UserCredencialResponseDTO encontrarUserCredencialId(Long id);
+
+    UserCredencialResponseDTO actualizarUserCredencial(Long id, UserCredencialRegisterDTO dto);
+
+    void eliminarUserCredencial(Long id);
+}

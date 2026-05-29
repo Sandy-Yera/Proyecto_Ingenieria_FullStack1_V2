@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable; 
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,7 +19,7 @@ import com.logistica.ms_auth.dto.UserCredencialRegisterDTO;
 import com.logistica.ms_auth.dto.UserCredencialResponseDTO;
 import com.logistica.ms_auth.exception.entity.EntityBadRequestException;
 import com.logistica.ms_auth.service.KafkaLogProducer;
-import com.logistica.ms_auth.service.UserCredencialService;
+import com.logistica.ms_auth.service.IUserCredencialService;
 
 import com.logistica.ms_auth.service.AuthService;
 import com.logistica.ms_auth.dto.LoginRequestDTO;
@@ -34,8 +34,8 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class UserCredencialController {
-    
-    private final UserCredencialService userCredencialService;
+
+    private final IUserCredencialService userCredencialService;
     private final KafkaLogProducer logProducer;
     private final AuthService authService;
 
@@ -47,9 +47,9 @@ public class UserCredencialController {
     @GetMapping()
     public ResponseEntity<List<UserCredencialResponseDTO>> listar() {
         List<UserCredencialResponseDTO> listado = userCredencialService.listar();
-        
-        return listado.isEmpty() 
-                ? ResponseEntity.noContent().build() 
+
+        return listado.isEmpty()
+                ? ResponseEntity.noContent().build()
                 : ResponseEntity.ok(listado);
     }
 
@@ -69,13 +69,15 @@ public class UserCredencialController {
         }
 
         logProducer.sendLog("WARN", "Petición a /existe rechazada: No se enviaron parámetros de búsqueda.");
-        throw new EntityBadRequestException("Debes enviar un id o un username en los parámetros de la consulta (?id=... o ?username=...)");
+        throw new EntityBadRequestException(
+                "Debes enviar un id o un username en los parámetros de la consulta (?id=... o ?username=...)");
     }
 
     /**
      * --- ENDPOINT RECEPTOR (CREAR) ---
      * Mapea directamente a POST /api/auth
-     * Recibe la llamada remota de ms-users mediante OpenFeign para persistir credenciales.
+     * Recibe la llamada remota de ms-users mediante OpenFeign para persistir
+     * credenciales.
      */
     @PostMapping()
     public ResponseEntity<UserCredencialResponseDTO> crearUser(
@@ -91,7 +93,7 @@ public class UserCredencialController {
     @PutMapping("/{id}")
     public ResponseEntity<UserCredencialResponseDTO> actualizarUser(
             @Valid @RequestBody UserCredencialRegisterDTO datosActualizados,
-            @PathVariable Long id) { 
+            @PathVariable Long id) {
         return ResponseEntity.ok(userCredencialService.actualizarUserCredencial(id, datosActualizados));
     }
 
@@ -109,7 +111,8 @@ public class UserCredencialController {
 
     /**
      * --- ELIMINAR ---
-     * Mapea a DELETE /api/auth/{id} y retorna un estado 204 No Content en caso de éxito.
+     * Mapea a DELETE /api/auth/{id} y retorna un estado 204 No Content en caso de
+     * éxito.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarUserCredencial(@PathVariable Long id) {
