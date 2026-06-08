@@ -25,14 +25,15 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "ms_edificio")
 public class Edificio {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long id;
 
     @NotBlank(message = "El nombre del edificio es obligatorio")
-    @Size(max = 100)
-    @Column(nullable = false)
+    @Size(max = 100, message = "El nombre no puede superar los 100 caracteres")
+    @Column(nullable = false, length = 100)
     private String nombreEdificio;
 
     @NotBlank(message = "La dirección es obligatoria")
@@ -49,11 +50,11 @@ public class Edificio {
 
     @NotBlank(message = "El RUT del administrador es obligatorio")
     @Pattern(regexp = "^[0-9]+-[0-9kK]{1}$", message = "Formato de RUT inválido (ej: 12345678-9)")
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String rutAdministrador;
 
+    @NotBlank(message = "El teléfono de conserjería es obligatorio")
     @Column(nullable = false)
-    @NotNull(message = "El telefono es obligatorio")
     private String telefonoConserjeria;
 
     @Min(value = 1, message = "El edificio debe tener al menos 1 departamento")
@@ -61,12 +62,14 @@ public class Edificio {
     @Column(nullable = false)
     private Integer totalDepartamentos;
 
-    @DecimalMin(value = "-90.0") @DecimalMax(value = "90.0")
+    @DecimalMin(value = "-90.0", message = "La latitud debe ser mayor o igual a -90.0")
+    @DecimalMax(value = "90.0",  message = "La latitud debe ser menor o igual a 90.0")
     @NotNull(message = "La latitud es obligatoria")
     @Column(nullable = false)
     private Double latitud;
 
-    @DecimalMin(value = "-180.0") @DecimalMax(value = "180.0")
+    @DecimalMin(value = "-180.0", message = "La longitud debe ser mayor o igual a -180.0")
+    @DecimalMax(value = "180.0",  message = "La longitud debe ser menor o igual a 180.0")
     @NotNull(message = "La longitud es obligatoria")
     @Column(nullable = false)
     private Double longitud;
