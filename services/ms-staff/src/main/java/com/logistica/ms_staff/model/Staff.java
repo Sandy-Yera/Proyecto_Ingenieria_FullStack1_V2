@@ -53,5 +53,5 @@ public class Staff {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-}
+    }
 }
