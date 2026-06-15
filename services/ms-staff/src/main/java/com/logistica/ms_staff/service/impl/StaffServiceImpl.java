@@ -107,7 +107,7 @@ public class StaffServiceImpl implements StaffService {
                 });
 
         staff.setEspecialidad(dto.getEspecialidad());
-        staff.setNivelExperiencia(dto.getNivelExperiencia());
+        staff.setExperiencia(dto.getExperiencia());
         staff.setEstadoDisponibilidad(dto.getEstadoDisponibilidad());
         staff.setCertificacionSec(dto.getCertificacionSec());
 
@@ -149,7 +149,7 @@ public class StaffServiceImpl implements StaffService {
         Staff staff = new Staff();
         staff.setId(dto.getId());
         staff.setEspecialidad(dto.getEspecialidad());
-        staff.setNivelExperiencia(dto.getNivelExperiencia());
+        staff.setExperiencia(dto.getExperiencia());
         staff.setEstadoDisponibilidad(dto.getEstadoDisponibilidad());
         staff.setCertificacionSec(dto.getCertificacionSec());
         return staff;
@@ -159,7 +159,7 @@ public class StaffServiceImpl implements StaffService {
         return new StaffResponseDTO(
                 staff.getId(),
                 staff.getEspecialidad(),
-                staff.getNivelExperiencia(),
+                staff.getExperiencia(),
                 staff.getEstadoDisponibilidad(),
                 staff.getCertificacionSec(),
                 staff.getCreatedAt()

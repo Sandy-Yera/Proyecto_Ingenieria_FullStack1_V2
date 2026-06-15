@@ -1,7 +1,7 @@
 package com.logistica.ms_staff.dto;
 
 import com.logistica.ms_staff.model.Especialidad;
-import com.logistica.ms_staff.model.NivelExperiencia;
+import com.logistica.ms_staff.model.Experiencia;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,7 +25,7 @@ public class StaffRequestDTO {
     private Especialidad especialidad;
  
     @NotNull(message = "El nivel de experiencia es obligatorio")
-    private NivelExperiencia nivelExperiencia;
+    private Experiencia Experiencia;
  
     @NotNull(message = "El estado de disponibilidad es obligatorio")
     private Boolean estadoDisponibilidad;

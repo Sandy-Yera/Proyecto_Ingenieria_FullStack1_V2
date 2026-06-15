@@ -36,7 +36,7 @@ public class Staff {
     @NotNull(message = "El nivel de experiencia es obligatorio")
     @Enumerated(EnumType.STRING)
     @Column(name = "nivel_experiencia", nullable = false)
-    private NivelExperiencia nivelExperiencia;
+    private Experiencia Experiencia;
 
     @NotNull(message = "El estado de disponibilidad es obligatorio")
     @Column(name = "estado_disponibilidad", nullable = false)
@@ -53,5 +53,5 @@ public class Staff {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-}
+    }
 }
