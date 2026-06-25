@@ -13,46 +13,79 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.logistica.ms_buildings.dto.EdificioRequestDTO;  // 🟢 Nuevo: Import Request DTO
-import com.logistica.ms_buildings.dto.EdificioResponseDTO; // 🟢 Nuevo: Import Response DTO
+import com.logistica.ms_buildings.dto.EdificioRequestDTO;
+import com.logistica.ms_buildings.dto.EdificioResponseDTO;
 import com.logistica.ms_buildings.service.EdificioService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * CONTROLADOR REST — EdificioController
+ * Responsabilidad exclusiva: recibir peticiones HTTP, delegar al servicio y devolver respuestas.
+ * NO contiene lógica de negocio. Solo orquesta el flujo entre el cliente y la capa de servicio.
+ *
+ * Base URL: /api/edificios
+ */
 @RestController
 @RequestMapping("/api/edificios")
 @RequiredArgsConstructor
 public class EdificioController {
 
     private final EdificioService edificioService;
-    
-    // CREAR
+
+    /**
+     * POST /api/edificios
+     * Registra un nuevo edificio en el sistema.
+     * Retorna 201 CREATED con el recurso creado.
+     */
     @PostMapping
-    public ResponseEntity<EdificioResponseDTO> crearEdificio(@Valid @RequestBody EdificioRequestDTO edificioDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(edificioService.crearEdificio(edificioDTO));
+    public ResponseEntity<EdificioResponseDTO> crearEdificio(
+            @Valid @RequestBody EdificioRequestDTO dto) {
+        EdificioResponseDTO creado = edificioService.crearEdificio(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
-    
-    // LEER
+
+    /**
+     * GET /api/edificios
+     * Lista todos los edificios registrados.
+     * Retorna 200 OK con la lista, o 204 NO CONTENT si no hay registros.
+     */
     @GetMapping
     public ResponseEntity<List<EdificioResponseDTO>> listarEdificios() {
         List<EdificioResponseDTO> listado = edificioService.listarEdificios();
-        
-        return listado.isEmpty() 
-                ? ResponseEntity.noContent().build() 
+        return listado.isEmpty()
+                ? ResponseEntity.noContent().build()
                 : ResponseEntity.ok(listado);
     }
-    
-    // ACTUALIZAR
+
+    /**
+     * GET /api/edificios/{id}
+     * Obtiene un edificio por su ID.
+     * Retorna 200 OK con el recurso encontrado, o lanza EntityNotFoundException (404).
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<EdificioResponseDTO> obtenerEdificioPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(edificioService.obtenerEdificioPorId(id));
+    }
+
+    /**
+     * PUT /api/edificios/{id}
+     * Actualiza los datos de un edificio existente.
+     * Retorna 200 OK con el recurso actualizado.
+     */
     @PutMapping("/{id}")
     public ResponseEntity<EdificioResponseDTO> actualizarEdificio(
-            @Valid @RequestBody EdificioRequestDTO datosActualizados,
-            @PathVariable Long id) { 
-        return ResponseEntity.ok(edificioService.actualizarEdificio(id, datosActualizados));
+            @PathVariable Long id,
+            @Valid @RequestBody EdificioRequestDTO dto) {
+        return ResponseEntity.ok(edificioService.actualizarEdificio(id, dto));
     }
-        
-    // ELIMINAR
+
+    /**
+     * DELETE /api/edificios/{id}
+     * Elimina un edificio por su ID.
+     * Retorna 204 NO CONTENT si la operación fue exitosa.
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarEdificio(@PathVariable Long id) {
         edificioService.eliminarEdificio(id);

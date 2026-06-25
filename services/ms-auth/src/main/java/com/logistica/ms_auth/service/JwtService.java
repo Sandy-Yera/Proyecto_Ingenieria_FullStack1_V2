@@ -1,5 +1,7 @@
 package com.logistica.ms_auth.service;
 
+import com.logistica.ms_auth.model.UserCredencial;
+import com.logistica.ms_auth.repository.UserCredencialRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -13,9 +15,6 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.logistica.ms_auth.repository.UserCredencialRepository;
-import com.logistica.ms_auth.model.UserCredencial;
 
 @Service
 public class JwtService {

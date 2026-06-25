@@ -1,4 +1,4 @@
-package com.logistica.ms_security.service;
+package com.logistica.ms_security.service.impl;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,14 +13,14 @@ import com.logistica.ms_security.exception.entity.EntityConflictException;
 import com.logistica.ms_security.exception.entity.EntityNotFoundException;
 import com.logistica.ms_security.model.Role;
 import com.logistica.ms_security.repository.RoleRepository;
+import com.logistica.ms_security.service.IRoleService;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class RoleService {
-    
+public class RoleServiceImpl implements IRoleService {
     private final RoleRepository roleRepository;
 
     // CREAR

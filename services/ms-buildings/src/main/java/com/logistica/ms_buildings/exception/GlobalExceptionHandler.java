@@ -1,113 +1,106 @@
 package com.logistica.ms_buildings.exception;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.logistica.ms_buildings.exception.entity.EntityBadRequestException;
 import com.logistica.ms_buildings.exception.entity.EntityConflictException;
+import com.logistica.ms_buildings.exception.entity.EntityCreationException;
 import com.logistica.ms_buildings.exception.entity.EntityNotFoundException;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-
-@ControllerAdvice // Indica que esta clase captura excepciones de todos los controladores
+/**
+ * MANEJADOR GLOBAL DE EXCEPCIONES — ms-buildings
+ * Captura de forma centralizada todas las excepciones lanzadas por el dominio de Edificios.
+ * Produce un JSON estandarizado con: timestamp, status, error, message (y errors en validaciones).
+ * Estructura idéntica a ms-auth para mantener simetría en el clúster de microservicios.
+ */
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /*
-     * Error en caso de no encontrar la clase User
-     * // Definimos ExceptionHandler para atrapar un error de tipo
+    /**
+     * Helper utilitario: construye el cuerpo base de la respuesta de error.
+     * Mantiene la misma estructura JSON en todo el clúster (Simetría con ms-auth).
      */
-
-    /*
-     * 
-     * |------------------------|
-     * | ERRORES CON ORIGEN DE -|
-     * | CLASES CREADAS -|
-     * |------------------------|
-     * 
-     */
-    // ---- USER NOT FOUND ----
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<Object> handleUserNotFound(EntityNotFoundException ex) {
-        // El 'Map' es la construcción de un body para retornarlo
+    private Map<String, Object> crearBaseBody(HttpStatus status, String mensaje) {
         Map<String, Object> body = new HashMap<>();
-        // Aquí ingresamos manualmente la información que queremos devolver
-        // Time Stamp para decir tiempo y hora
         body.put("timestamp", LocalDateTime.now());
+        body.put("status", status.value());
+        body.put("error", status.getReasonPhrase());
+        body.put("message", mensaje);
+        return body;
+    }
 
-        // Mensaje para decir que fue lo que ocurrió
-        // Utilizamos el argumento 'ex' para ver el error y obtener el mensaje que
-        // queremos retornar
-        body.put("message", ex.getMessage());
-
-        // en 'Status' especificamos que tipo de error queremos arrojar
-        body.put("status", HttpStatus.NOT_FOUND.value());
-
-        // Por ultimo tenemos que retornar un ResponseEntity con todo lo contenido
+    // ---- NOT FOUND (404) ----
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Object> handleEntityNotFound(EntityNotFoundException ex) {
+        Map<String, Object> body = crearBaseBody(HttpStatus.NOT_FOUND, ex.getMessage());
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
-    // ---- USER CONFLICT ----
+    // ---- CONFLICT (409) ----
     @ExceptionHandler(EntityConflictException.class)
-    public ResponseEntity<Object> handleUserConflict(EntityConflictException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("message", ex.getMessage());
-        body.put("status", HttpStatus.CONFLICT.value());
-
+    public ResponseEntity<Object> handleEntityConflict(EntityConflictException ex) {
+        Map<String, Object> body = crearBaseBody(HttpStatus.CONFLICT, ex.getMessage());
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
 
-    /*
-     * |---------------|
-     * | ERRORES DE |
-     * | LIBRERIAS |
-     * |---------------|
-     */
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Object> HandleJsonError(HttpMessageNotReadableException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Formato de JSON inválido o tipo de dato incorrecto");
-        body.put("details", ex.getMostSpecificCause().getCause());
-
+    // ---- BAD REQUEST (400) ----
+    @ExceptionHandler(EntityBadRequestException.class)
+    public ResponseEntity<Object> handleEntityBadRequest(EntityBadRequestException ex) {
+        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST, ex.getMessage());
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    // Error de un BadRequest cuando una validación está mal hecha
-    // Error generico cuando hay un body mal hecho
+    // ---- INTERNAL SERVER ERROR (500) — Fallo de creación ----
+    @ExceptionHandler(EntityCreationException.class)
+    public ResponseEntity<Object> handleEntityCreation(EntityCreationException ex) {
+        Map<String, Object> body = crearBaseBody(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // ---- VALIDACIÓN DE JSON MALFORMADO ----
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Object> handleJsonError(HttpMessageNotReadableException ex) {
+        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST,
+                "Formato de JSON inválido o tipo de dato incorrecto");
+        body.put("details", ex.getMostSpecificCause().getMessage());
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // ---- VALIDACIÓN DE CAMPOS DTO (@Valid / @NotBlank / @NotNull) ----
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Object> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
+        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST,
+                "Errores de validación en los campos del formulario");
 
-        // Aquí extraemos solo los mensajes que pusimos en las anotaciones (@NotBlank,
-        // @Min, etc.)
-        Map<String, String> errores = new HashMap<>();
-        ex.getBindingResult().getFieldErrors()
-                .forEach(error -> errores.put(error.getField(), error.getDefaultMessage()));
+        Map<String, String> errores = ex.getBindingResult().getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        error -> error.getField(),
+                        error -> error.getDefaultMessage() != null
+                                ? error.getDefaultMessage()
+                                : "Campo inválido",
+                        (existente, nuevo) -> existente // Evita duplicados en el mapa
+                ));
 
         body.put("errors", errores);
-
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    // Opcional: Capturar cualquier error genéricos (500) o no definido en el
-    // controller
+    // ---- ERROR GENÉRICO INESPERADO (500) ----
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleGlobalException(Exception ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("message", "Ocurrió un error interno en el servidor");
-        body.put("error", ex.getMessage());
-
+        Map<String, Object> body = crearBaseBody(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Ocurrió un error inesperado en el servidor de gestión de edificios");
+        body.put("details", ex.getMessage());
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

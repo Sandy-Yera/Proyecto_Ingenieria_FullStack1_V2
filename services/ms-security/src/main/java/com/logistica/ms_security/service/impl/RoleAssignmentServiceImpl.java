@@ -1,4 +1,4 @@
-package com.logistica.ms_security.service;
+package com.logistica.ms_security.service.impl;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -14,14 +14,14 @@ import com.logistica.ms_security.exception.entity.EntityConflictException;
 import com.logistica.ms_security.exception.entity.EntityNotFoundException;
 import com.logistica.ms_security.model.RoleAssignment;
 import com.logistica.ms_security.repository.RoleAssignmentRepository;
+import com.logistica.ms_security.service.IRoleAssignmentService;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true) // 🟢 Mantiene optimización de lectura global de la Etapa 2
-public class RoleAssignmentService {
-
+public class RoleAssignmentServiceImpl implements IRoleAssignmentService {
     private final RoleAssignmentRepository roleAssignmentRepository;
 
     @Transactional // 🟢 Transacción de escritura

@@ -1,4 +1,4 @@
-package com.logistica.ms_auth.service;
+package com.logistica.ms_auth.service.impl;
 
 import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,13 +11,15 @@ import com.logistica.ms_auth.dto.UserCredencialResponseDTO;
 import com.logistica.ms_auth.exception.entity.*;
 import com.logistica.ms_auth.model.UserCredencial;
 import com.logistica.ms_auth.repository.UserCredencialRepository;
+import com.logistica.ms_auth.service.IUserCredencialService;
+import com.logistica.ms_auth.service.KafkaLogProducer;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class UserCredencialService {
+public class UserCredencialServiceImpl implements IUserCredencialService {
 
     private final UserCredencialRepository userCredencialRepository;
     private final PasswordEncoder passwordEncoder;
@@ -34,8 +36,10 @@ public class UserCredencialService {
         }
 
         if (userCredencialRepository.existsByUsername(dto.getUsername())) {
-            logProducer.sendLog("WARN", "Conflicto de seguridad. El Username ya existe: " + dto.getUsername() + " | TraceId: " + traceId);
-            throw new EntityConflictException("El email o username ya se encuentra registrado en el módulo de autenticación.");
+            logProducer.sendLog("WARN",
+                    "Conflicto de seguridad. El Username ya existe: " + dto.getUsername() + " | TraceId: " + traceId);
+            throw new EntityConflictException(
+                    "El email o username ya se encuentra registrado en el módulo de autenticación.");
         }
 
         UserCredencial userCredencial = new UserCredencial();
@@ -46,7 +50,8 @@ public class UserCredencialService {
 
         UserCredencial guardado = userCredencialRepository.save(userCredencial);
 
-        logProducer.sendLog("INFO", "Credenciales asignadas correctamente al ID: " + guardado.getId() + " | TraceId: " + traceId);
+        logProducer.sendLog("INFO",
+                "Credenciales asignadas correctamente al ID: " + guardado.getId() + " | TraceId: " + traceId);
 
         return convertirAResponseDTO(guardado);
     }
@@ -72,8 +77,10 @@ public class UserCredencialService {
         String traceId = request.getHeader("X-Trace-Id");
         return convertirAResponseDTO(userCredencialRepository.findById(id)
                 .orElseThrow(() -> {
-                    logProducer.sendLog("WARN", "Búsqueda fallida de credencial inexistente con ID: " + id + " | TraceId: " + traceId);
-                    return new EntityNotFoundException("No se encontraron credenciales para el identificador proporcionado.");
+                    logProducer.sendLog("WARN",
+                            "Búsqueda fallida de credencial inexistente con ID: " + id + " | TraceId: " + traceId);
+                    return new EntityNotFoundException(
+                            "No se encontraron credenciales para el identificador proporcionado.");
                 }));
     }
 
@@ -83,13 +90,15 @@ public class UserCredencialService {
 
         UserCredencial usuarioExistente = userCredencialRepository.findById(id)
                 .orElseThrow(() -> {
-                    logProducer.sendLog("WARN", "Intento fallido de actualizar credencial inexistente con ID: " + id + " | TraceId: " + traceId);
+                    logProducer.sendLog("WARN", "Intento fallido de actualizar credencial inexistente con ID: " + id
+                            + " | TraceId: " + traceId);
                     return new EntityNotFoundException("No se puede actualizar. El usuario no existe.");
                 });
 
         if (!usuarioExistente.getUsername().equals(dto.getUsername()) &&
                 userCredencialRepository.existsByUsername(dto.getUsername())) {
-            logProducer.sendLog("WARN", "Conflicto al actualizar ID " + id + ". El Username '" + dto.getUsername() + "' ya está ocupado. | TraceId: " + traceId);
+            logProducer.sendLog("WARN", "Conflicto al actualizar ID " + id + ". El Username '" + dto.getUsername()
+                    + "' ya está ocupado. | TraceId: " + traceId);
             throw new EntityConflictException("El nuevo Username ya está en uso por otra entidad.");
         }
 
@@ -138,12 +147,14 @@ public class UserCredencialService {
     public void eliminarUserCredencial(Long id) {
         String traceId = request.getHeader("X-Trace-Id");
         if (!userCredencialRepository.existsById(id)) {
-            logProducer.sendLog("WARN", "Intento fallido de eliminar credencial inexistente con ID: " + id + " | TraceId: " + traceId);
+            logProducer.sendLog("WARN",
+                    "Intento fallido de eliminar credencial inexistente con ID: " + id + " | TraceId: " + traceId);
             throw new EntityNotFoundException("No se encontró el registro de autenticación a eliminar.");
         }
 
         userCredencialRepository.deleteById(id);
-        logProducer.sendLog("INFO", "Credenciales del ID " + id + " eliminadas de la base de datos de seguridad. | TraceId: " + traceId);
+        logProducer.sendLog("INFO",
+                "Credenciales del ID " + id + " eliminadas de la base de datos de seguridad. | TraceId: " + traceId);
     }
 
     public UserCredencialResponseDTO convertirAResponseDTO(UserCredencial userCredencial) {
@@ -154,4 +165,5 @@ public class UserCredencialService {
         response.setLastLogin(userCredencial.getLastLogin());
         return response;
     }
+
 }

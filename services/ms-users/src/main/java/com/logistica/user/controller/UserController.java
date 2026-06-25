@@ -18,7 +18,7 @@ import com.logistica.user.dto.UserRegisterDTO;
 import com.logistica.user.dto.UserResponseDTO;
 import com.logistica.user.exception.entity.*;
 import com.logistica.user.service.KafkaLogProducer;
-import com.logistica.user.service.UserService;
+import com.logistica.user.service.IUserService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserService userService;
+    private final IUserService userService;
     private final KafkaLogProducer logProducer;
 
     // -- Listar Usuarios
