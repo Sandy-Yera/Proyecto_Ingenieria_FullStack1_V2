@@ -10,9 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.logistica.ms_quotes.client.BuildingClient;
+import com.logistica.ms_quotes.client.PriceEngineClient;
 import com.logistica.ms_quotes.client.UserClient;
 import com.logistica.ms_quotes.dto.CotizacionRequestDTO;
 import com.logistica.ms_quotes.dto.CotizacionResponseDTO;
+import com.logistica.ms_quotes.dto.PrecioRequestDTO;
+import com.logistica.ms_quotes.dto.PrecioResponseDTO;
 import com.logistica.ms_quotes.exception.entity.EntityBadRequestException;
 import com.logistica.ms_quotes.exception.entity.EntityConflictException;
 import com.logistica.ms_quotes.exception.entity.EntityNotFoundException;
@@ -27,8 +30,9 @@ import com.logistica.ms_quotes.service.CotizacionService;
  *
  * La creación se divide en dos pasos para evitar retener conexiones del pool
  * Hikari mientras se esperan las validaciones remotas vía Feign:
- *  1. crearCotizacion (fuera de transacción): valida Usuario y Edificio remotos.
- *  2. guardarCotizacionTransaccional (a través del proxy self): persiste de forma atómica.
+ * 1. crearCotizacion (fuera de transacción): valida Usuario y Edificio remotos.
+ * 2. guardarCotizacionTransaccional (a través del proxy self): persiste de
+ * forma atómica.
  */
 @Service
 @Transactional(readOnly = true)
@@ -40,26 +44,30 @@ public class CotizacionServiceImpl implements CotizacionService {
     private final UserClient userClient;
     private final BuildingClient buildingClient;
     private final CotizacionService self;
+    private final PriceEngineClient priceEngineClient;
 
     public CotizacionServiceImpl(CotizacionRepository cotizacionRepository,
-                                  UserClient userClient,
-                                  BuildingClient buildingClient,
-                                  @Lazy CotizacionService self) {
+            UserClient userClient,
+            BuildingClient buildingClient,
+            PriceEngineClient priceEngineClient,
+            @Lazy CotizacionService self) {
         this.cotizacionRepository = cotizacionRepository;
         this.userClient = userClient;
         this.buildingClient = buildingClient;
+        this.priceEngineClient = priceEngineClient;
         this.self = self;
     }
 
     // ============================================================
-    //  CREAR (Paso 1: fuera de la transacción — validaciones remotas)
+    // CREAR (Paso 1: fuera de la transacción — validaciones remotas)
     // ============================================================
     @Override
     public CotizacionResponseDTO crearCotizacion(CotizacionRequestDTO dto) {
-        log.info("[ms-quotes] Iniciando creación de cotización para userId={} buildingId={}",
-                dto.getUserId(), dto.getBuildingId());
+        log.info("[ms-quotes] Iniciando creación de cotización para userId={} buildingId={} categoria={}",
+                dto.getUserId(), dto.getBuildingId(), dto.getCategoria());
 
-        // 1. Validación remota del Usuario en ms-users via OpenFeign con excepciones tipificadas
+        // 1. Validación remota del Usuario en ms-users via OpenFeign con excepciones
+        // tipificadas
         try {
             userClient.obtenerUsuarioPorId(dto.getUserId());
         } catch (feign.FeignException.NotFound e) {
@@ -69,7 +77,8 @@ public class CotizacionServiceImpl implements CotizacionService {
             throw new EntityBadRequestException("Error de comunicación remota con ms-users: " + e.getMessage());
         }
 
-        // 2. Validación remota del Edificio en ms-buildings via OpenFeign con excepciones tipificadas
+        // 2. Validación remota del Edificio en ms-buildings via OpenFeign con
+        // excepciones tipificadas
         try {
             buildingClient.obtenerEdificioPorId(dto.getBuildingId());
         } catch (feign.FeignException.NotFound e) {
@@ -79,12 +88,28 @@ public class CotizacionServiceImpl implements CotizacionService {
             throw new EntityBadRequestException("Error de comunicación remota con ms-buildings: " + e.getMessage());
         }
 
+        // 3. Calcular tarifa automática en ms-price-engine
+        try {
+            PrecioRequestDTO precioRequest = new PrecioRequestDTO(
+                    dto.getCategoria(),
+                    dto.getHorasTrabajo(),
+                    dto.getUnidadesMaterial());
+            PrecioResponseDTO precio = priceEngineClient.calcularPrecio(precioRequest);
+            dto.setMontoEstimado(precio.getMontoTotal());
+        } catch (feign.FeignException.NotFound e) {
+            throw new EntityNotFoundException(
+                    "No se puede calcular el precio. No se encontró una tarifa para la categoría "
+                            + dto.getCategoria() + " en el sistema de precios.");
+        } catch (feign.FeignException e) {
+            throw new EntityBadRequestException("Error de comunicación remota con ms-price-engine: " + e.getMessage());
+        }
+
         // 3. Pasamos al proxy para ejecutar la persistencia atómica rápida
         return self.guardarCotizacionTransaccional(mapToEntity(dto));
     }
 
     // ============================================================
-    //  CREAR (Paso 2: persistencia aislada y transaccional)
+    // CREAR (Paso 2: persistencia aislada y transaccional)
     // ============================================================
     @Override
     @Transactional
@@ -99,7 +124,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     // ============================================================
-    //  LEER — Todos
+    // LEER — Todos
     // ============================================================
     @Override
     public List<CotizacionResponseDTO> listarCotizaciones() {
@@ -113,7 +138,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     // ============================================================
-    //  LEER — Por ID
+    // LEER — Por ID
     // ============================================================
     @Override
     public CotizacionResponseDTO obtenerCotizacionPorId(Long id) {
@@ -127,7 +152,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     // ============================================================
-    //  LEER — Por Usuario
+    // LEER — Por Usuario
     // ============================================================
     @Override
     public List<CotizacionResponseDTO> listarPorUsuario(Long userId) {
@@ -141,7 +166,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     // ============================================================
-    //  LEER — Por Estado
+    // LEER — Por Estado
     // ============================================================
     @Override
     public List<CotizacionResponseDTO> listarPorEstado(Status status) {
@@ -155,7 +180,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     // ============================================================
-    //  ACTUALIZAR
+    // ACTUALIZAR
     // ============================================================
     @Override
     @Transactional
@@ -179,8 +204,8 @@ public class CotizacionServiceImpl implements CotizacionService {
         cotizacionExistente.setUserId(dto.getUserId());
         cotizacionExistente.setBuildingId(dto.getBuildingId());
         cotizacionExistente.setDescription(dto.getDescription());
-        cotizacionExistente.setCategory(dto.getCategory());
-        cotizacionExistente.setEstimatedAmount(dto.getEstimatedAmount());
+        cotizacionExistente.setCategory(dto.getCategoria());
+        cotizacionExistente.setMontoEstimado(dto.getMontoEstimado());
 
         if (dto.getStatus() != null) {
             cotizacionExistente.setStatus(dto.getStatus());
@@ -191,7 +216,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     // ============================================================
-    //  ELIMINAR
+    // ELIMINAR
     // ============================================================
     @Override
     @Transactional
@@ -206,7 +231,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     // ============================================================
-    //  HELPERS DE MAPEO (privados — sin exposición al Controller)
+    // HELPERS DE MAPEO (privados — sin exposición al Controller)
     // ============================================================
 
     private Cotizacion mapToEntity(CotizacionRequestDTO dto) {
@@ -214,8 +239,8 @@ public class CotizacionServiceImpl implements CotizacionService {
         c.setUserId(dto.getUserId());
         c.setBuildingId(dto.getBuildingId());
         c.setDescription(dto.getDescription());
-        c.setCategory(dto.getCategory());
-        c.setEstimatedAmount(dto.getEstimatedAmount());
+        c.setCategory(dto.getCategoria());
+        c.setMontoEstimado(dto.getMontoEstimado());
         if (dto.getStatus() != null) {
             c.setStatus(dto.getStatus()); // Si es null, @PrePersist asigna PENDING
         }
@@ -229,9 +254,8 @@ public class CotizacionServiceImpl implements CotizacionService {
                 c.getBuildingId(),
                 c.getDescription(),
                 c.getCategory(),
-                c.getEstimatedAmount(),
+                c.getMontoEstimado(),
                 c.getStatus(),
-                c.getCreatedAt()
-        );
+                c.getCreatedAt());
     }
 }

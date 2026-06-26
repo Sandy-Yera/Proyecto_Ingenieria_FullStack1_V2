@@ -49,13 +49,13 @@ public class Cotizacion {
     @NotNull(message = "La categoría es obligatoria")
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false)
-    private Category category;
+    private Categoria category;
 
     // CORRECCIÓN: Se agrega @DecimalMin para evitar montos negativos o en cero
     @NotNull(message = "El monto estimado es obligatorio")
     @DecimalMin(value = "0.01", message = "El monto estimado debe ser mayor a 0")
     @Column(name = "estimated_amount", nullable = false)
-    private Double estimatedAmount;
+    private Double montoEstimado;
 
     @NotNull(message = "El estado es obligatorio")
     @Enumerated(EnumType.STRING)

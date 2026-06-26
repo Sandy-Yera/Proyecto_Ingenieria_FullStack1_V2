@@ -1,5 +1,5 @@
 package com.logistica.ms_quotes.model;
 
-public enum Category {
+public enum Categoria {
     PLOMERIA, ELECTRICIDAD, GAS
 }
