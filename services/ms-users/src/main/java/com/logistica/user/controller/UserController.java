@@ -94,6 +94,12 @@ public class UserController {
         return ResponseEntity.noContent().build(); // Nota: Cambiado a noContent() (24) por buena práctica REST en Delete
     }
 
+    // -- Obtener usuario por ID
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponseDTO> obtenerUserPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.encontrarUserId(id));
+    }
+
     // -- Muestra el total de usuarios
     @GetMapping("/total-usuarios")
     public ResponseEntity<String> mensajeTotalUsuarios() {
