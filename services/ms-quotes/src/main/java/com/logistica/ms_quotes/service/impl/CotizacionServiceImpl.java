@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.logistica.ms_quotes.client.BuildingClient;
@@ -112,7 +113,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     // CREAR (Paso 2: persistencia aislada y transaccional)
     // ============================================================
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CotizacionResponseDTO guardarCotizacionTransaccional(Cotizacion cotizacion) {
         if (cotizacion.getId() != null && cotizacionRepository.existsById(cotizacion.getId())) {
             throw new EntityConflictException("Ya existe una cotización con este ID");
