@@ -68,6 +68,6 @@ public class AuthService {
 
     // Endpoint de validación que el API Gateway puede consultar
     public boolean validateToken(String token) {
-        return jwtService.isTokenValid(token);
+        return jwtService.isTokenValidAndUserActive(token, userCredencialRepository);
     }
 }
