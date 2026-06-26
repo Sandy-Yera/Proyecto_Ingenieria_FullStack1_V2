@@ -4,11 +4,11 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.logistica.user.client.AuthClient; 
-import com.logistica.user.dto.UserCredencialRegisterDTO; 
+import com.logistica.user.client.AuthClient;
+import com.logistica.user.dto.UserCredencialRegisterDTO;
 import com.logistica.user.dto.UserRegisterDTO;
 import com.logistica.user.dto.UserResponseDTO;
-import com.logistica.user.dto.ActualizarUsernameDTO; 
+import com.logistica.user.dto.ActualizarUsernameDTO;
 import com.logistica.user.exception.entity.EntityBadRequestException;
 import com.logistica.user.exception.entity.EntityConflictException;
 import com.logistica.user.exception.entity.EntityNotFoundException;
@@ -16,20 +16,20 @@ import com.logistica.user.model.User;
 import com.logistica.user.repository.UserRepository;
 import com.logistica.user.service.IUserService;
 import com.logistica.user.service.KafkaLogProducer;
+import com.logistica.user.service.KafkaUserEventProducer;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
-
 @Service
 @RequiredArgsConstructor
-public class UserServiceImplement implements IUserService{
+public class UserServiceImplement implements IUserService {
 
     private final UserRepository userRepository;
     private final KafkaLogProducer logProducer;
-    private final AuthClient authClient; 
+    private final AuthClient authClient;
     private final HttpServletRequest request;
-    private final KafkaUserEventProducer userEventProducer; 
+    private final KafkaUserEventProducer userEventProducer;
 
     @Transactional(readOnly = true)
     public List<UserResponseDTO> listar() {
@@ -39,7 +39,7 @@ public class UserServiceImplement implements IUserService{
                 .toList();
     }
 
-    @Transactional(readOnly = true)    
+    @Transactional(readOnly = true)
     public Boolean existeUserId(Long id) {
         return userRepository.existsById(id);
     }
@@ -54,7 +54,8 @@ public class UserServiceImplement implements IUserService{
         String traceId = request.getHeader("X-Trace-Id");
         return convertirAResponseDTO(userRepository.findById(id)
                 .orElseThrow(() -> {
-                    logProducer.sendLog("WARN", "Búsqueda fallida. Usuario ID " + id + " no existe. | TraceId: " + traceId);
+                    logProducer.sendLog("WARN",
+                            "Búsqueda fallida. Usuario ID " + id + " no existe. | TraceId: " + traceId);
                     return new EntityNotFoundException("No se encontró al usuario con la id: " + id);
                 }));
     }
@@ -64,7 +65,8 @@ public class UserServiceImplement implements IUserService{
         String traceId = request.getHeader("X-Trace-Id");
         return convertirAResponseDTO(userRepository.findByRut(rut)
                 .orElseThrow(() -> {
-                    logProducer.sendLog("WARN", "Búsqueda fallida. Usuario RUT " + rut + " no existe. | TraceId: " + traceId);
+                    logProducer.sendLog("WARN",
+                            "Búsqueda fallida. Usuario RUT " + rut + " no existe. | TraceId: " + traceId);
                     return new EntityNotFoundException("No se encontró al usuario con el rut: " + rut);
                 }));
     }
@@ -74,45 +76,59 @@ public class UserServiceImplement implements IUserService{
         String traceId = request.getHeader("X-Trace-Id");
 
         if (userRepository.existsByRut(dto.getRut())) {
-            logProducer.sendLog("WARN", "Fallo de registro: El RUT " + dto.getRut() + " ya está registrado. | TraceId: " + traceId);
+            logProducer.sendLog("WARN",
+                    "Fallo de registro: El RUT " + dto.getRut() + " ya está registrado. | TraceId: " + traceId);
             throw new EntityConflictException("El RUT ingresado ya pertenece a un usuario en el sistema.");
         }
 
         if (userRepository.existsByCorreo(dto.getCorreo())) {
-            logProducer.sendLog("WARN", "Fallo de registro: El correo " + dto.getCorreo() + " ya está en uso. | TraceId: " + traceId);
+            logProducer.sendLog("WARN",
+                    "Fallo de registro: El correo " + dto.getCorreo() + " ya está en uso. | TraceId: " + traceId);
             throw new EntityConflictException("El correo electrónico ya se encuentra registrado.");
         }
 
         User nuevoUser = new User();
         nuevoUser = convertirAEntidad(dto, nuevoUser);
-        
+
         User guardadoLocal = userRepository.saveAndFlush(nuevoUser);
         Long generadoId = guardadoLocal.getId();
-        
-        logProducer.sendLog("INFO", "Perfil de usuario guardado localmente con ID: " + generadoId + " | TraceId: " + traceId);
+
+        logProducer.sendLog("INFO",
+                "Perfil de usuario guardado localmente con ID: " + generadoId + " | TraceId: " + traceId);
 
         try {
             UserCredencialRegisterDTO credencialesDTO = new UserCredencialRegisterDTO();
             credencialesDTO.setId(generadoId);
-            credencialesDTO.setUsername(dto.getCorreo()); 
-            credencialesDTO.setPassword(dto.getPassword()); 
+            credencialesDTO.setUsername(dto.getCorreo());
+            credencialesDTO.setPassword(dto.getPassword());
 
             // Comunicación síncrona mediante OpenFeign
             authClient.generarCredencialesRemotas(credencialesDTO);
-            logProducer.sendLog("INFO", "Credenciales asignadas remotamente en ms-auth para ID: " + generadoId + " | TraceId: " + traceId);
+            logProducer.sendLog("INFO",
+                    "Credenciales asignadas remotamente en ms-auth para ID: " + generadoId + " | TraceId: " + traceId);
 
         } catch (Exception ex) {
-            logProducer.sendLog("ERROR", "Error crítico en el flujo de registro distributivo para ID: " + generadoId + ". Iniciando saga compensatoria de borrado. Detalle: " + ex.getMessage() + " | TraceId: " + traceId);
-            
+            logProducer.sendLog("ERROR",
+                    "Error crítico en el flujo de registro distributivo para ID: " + generadoId
+                            + ". Iniciando saga compensatoria de borrado. Detalle: " + ex.getMessage() + " | TraceId: "
+                            + traceId);
+
             try {
                 authClient.eliminarCredencialesRemotas(generadoId);
-                logProducer.sendLog("INFO", "Saga compensatoria ejecutada con éxito. Credenciales huérfanas removidas de ms-auth para ID: " + generadoId + " | TraceId: " + traceId);
+                logProducer.sendLog("INFO",
+                        "Saga compensatoria ejecutada con éxito. Credenciales huérfanas removidas de ms-auth para ID: "
+                                + generadoId + " | TraceId: " + traceId);
             } catch (Exception compensationEx) {
-                logProducer.sendLog("ERROR", "Fallo crítico e irreversible: No se pudo limpiar la credencial huérfana en ms-auth para ID: " + generadoId + ". Se requiere intervención manual. Detalle: " + compensationEx.getMessage() + " | TraceId: " + traceId);
+                logProducer.sendLog("ERROR",
+                        "Fallo crítico e irreversible: No se pudo limpiar la credencial huérfana en ms-auth para ID: "
+                                + generadoId + ". Se requiere intervención manual. Detalle: "
+                                + compensationEx.getMessage() + " | TraceId: " + traceId);
             }
 
-            // Lanza la excepción para asegurar el Rollback local automático del perfil guardado
-            throw new EntityConflictException("No se pudieron registrar las credenciales de seguridad correctamente. Proceso de registro cancelado de forma segura.");
+            // Lanza la excepción para asegurar el Rollback local automático del perfil
+            // guardado
+            throw new EntityConflictException(
+                    "No se pudieron registrar las credenciales de seguridad correctamente. Proceso de registro cancelado de forma segura.");
         }
 
         return convertirAResponseDTO(guardadoLocal);
@@ -124,7 +140,8 @@ public class UserServiceImplement implements IUserService{
 
         User usuarioExistente = userRepository.findById(id)
                 .orElseThrow(() -> {
-                    logProducer.sendLog("WARN", "Intento fallido de actualizar usuario inexistente con ID: " + id + " | TraceId: " + traceId);
+                    logProducer.sendLog("WARN", "Intento fallido de actualizar usuario inexistente con ID: " + id
+                            + " | TraceId: " + traceId);
                     return new EntityNotFoundException("No se encontró al usuario con la id: " + id);
                 });
 
@@ -135,7 +152,8 @@ public class UserServiceImplement implements IUserService{
         boolean correoCambiado = !usuarioExistente.getCorreo().equalsIgnoreCase(dto.getCorreo());
 
         if (correoCambiado && userRepository.existsByCorreo(dto.getCorreo())) {
-            logProducer.sendLog("WARN", "Conflicto al actualizar ID " + id + ". El Correo '" + dto.getCorreo() + "' ya está ocupado. | TraceId: " + traceId);
+            logProducer.sendLog("WARN", "Conflicto al actualizar ID " + id + ". El Correo '" + dto.getCorreo()
+                    + "' ya está ocupado. | TraceId: " + traceId);
             throw new EntityConflictException("El Correo '" + dto.getCorreo() + "' ya está en uso por otro usuario.");
         }
 
@@ -145,21 +163,27 @@ public class UserServiceImplement implements IUserService{
 
         if (correoCambiado) {
             try {
-                // 🛠️ AJUSTE DE PRECISIÓN: Instanciación acoplada estrictamente a tu clase DTO real
+                // 🛠️ AJUSTE DE PRECISIÓN: Instanciación acoplada estrictamente a tu clase DTO
+                // real
                 ActualizarUsernameDTO actualizarDTO = new ActualizarUsernameDTO();
                 actualizarDTO.setUsername(actualizado.getCorreo()); // Setter real autogenerado por @Data
 
-                logProducer.sendLog("INFO", "Propagando cambio de Username a ms-auth para el ID: " + id + " | TraceId: " + traceId);
-                
+                logProducer.sendLog("INFO",
+                        "Propagando cambio de Username a ms-auth para el ID: " + id + " | TraceId: " + traceId);
+
                 // Envío de la carga útil corregida a ms-auth vía OpenFeign
                 authClient.actualizarCredencialesRemotas(id, actualizarDTO);
-                
-                logProducer.sendLog("INFO", "Sincronización de credenciales exitosa en ms-auth para ID: " + id + " | TraceId: " + traceId);
-                
+
+                logProducer.sendLog("INFO",
+                        "Sincronización de credenciales exitosa en ms-auth para ID: " + id + " | TraceId: " + traceId);
+
             } catch (Exception ex) {
-                logProducer.sendLog("ERROR", "No se pudo sincronizar el nuevo correo con ms-auth para ID: " + id + ". Detalle: " + ex.getMessage() + " | TraceId: " + traceId);
-                // Provoca de inmediato el Rollback local del saveAndFlush si falla la red remota
-                throw new EntityBadRequestException("Error de sincronización de seguridad remota. Operación revertida.");
+                logProducer.sendLog("ERROR", "No se pudo sincronizar el nuevo correo con ms-auth para ID: " + id
+                        + ". Detalle: " + ex.getMessage() + " | TraceId: " + traceId);
+                // Provoca de inmediato el Rollback local del saveAndFlush si falla la red
+                // remota
+                throw new EntityBadRequestException(
+                        "Error de sincronización de seguridad remota. Operación revertida.");
             }
         }
 
@@ -172,12 +196,14 @@ public class UserServiceImplement implements IUserService{
 
         User usuario = userRepository.findById(id)
                 .orElseThrow(() -> {
-                    logProducer.sendLog("WARN", "Intento de eliminar usuario inexistente ID: " + id + " | TraceId: " + traceId);
+                    logProducer.sendLog("WARN",
+                            "Intento de eliminar usuario inexistente ID: " + id + " | TraceId: " + traceId);
                     return new EntityNotFoundException("No se encontró al usuario con la id: " + id);
                 });
 
         userRepository.deleteById(id);
-        logProducer.sendLog("INFO", "Usuario ID " + id + " eliminado de ms-users. Evento de cascada publicado a Kafka. | TraceId: " + traceId);
+        logProducer.sendLog("INFO", "Usuario ID " + id
+                + " eliminado de ms-users. Evento de cascada publicado a Kafka. | TraceId: " + traceId);
 
         // Despacho asíncrono al broker de Kafka para el manejo de limpieza reactiva
         userEventProducer.publishUserDeleted(id, traceId);
@@ -195,7 +221,7 @@ public class UserServiceImplement implements IUserService{
     public UserResponseDTO convertirAResponseDTO(User user) {
         UserResponseDTO response = new UserResponseDTO();
         response.setId(user.getId());
-        response.setRut(user.getRut()); 
+        response.setRut(user.getRut());
         response.setPNombre(user.getPNombre());
         response.setSNombre(user.getSNombre());
         response.setApPat(user.getApPat());
@@ -206,7 +232,7 @@ public class UserServiceImplement implements IUserService{
     }
 
     public User convertirAEntidad(UserRegisterDTO dto, User user) {
-        user.setRut(dto.getRut()); 
+        user.setRut(dto.getRut());
         user.setPNombre(dto.getPNombre());
         user.setSNombre(dto.getSNombre());
         user.setApPat(dto.getApPat());

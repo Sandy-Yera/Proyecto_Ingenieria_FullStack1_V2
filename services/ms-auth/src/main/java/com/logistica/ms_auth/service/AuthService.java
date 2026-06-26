@@ -63,8 +63,7 @@ public class AuthService {
                 "Bearer",
                 jwtService.getExpirationMs(),
                 credencial.getId(),
-                credencial.getUsername()
-        );
+                credencial.getUsername());
     }
 
     // Endpoint de validación que el API Gateway puede consultar

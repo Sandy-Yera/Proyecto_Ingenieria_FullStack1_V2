@@ -1,9 +1,10 @@
 package com.logistica.ms_quotes.dto;
 
-import com.logistica.ms_quotes.model.Category;
+import com.logistica.ms_quotes.model.Categoria;
 import com.logistica.ms_quotes.model.Status;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -13,7 +14,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * DTO DE ENTRADA (REQUEST) — CotizacionRequestDTO
- * Recibe y valida los datos enviados por el cliente al crear o actualizar una Cotizacion.
+ * Recibe y valida los datos enviados por el cliente al crear o actualizar una
+ * Cotizacion.
  * Desacopla la capa de transporte HTTP de la entidad JPA, evitando exponer
  * el modelo de persistencia directamente al cliente.
  */
@@ -33,12 +35,19 @@ public class CotizacionRequestDTO {
     private String description;
 
     @NotNull(message = "La categoría es obligatoria")
-    private Category category;
+    private Categoria categoria;
 
-    @NotNull(message = "El monto estimado es obligatorio")
-    @DecimalMin(value = "0.01", message = "El monto estimado debe ser mayor a 0")
-    private Double estimatedAmount;
+    @NotNull(message = "Las horas de trabajo son obligatorias")
+    @DecimalMin(value = "0.1", inclusive = true, message = "Las horas de trabajo deben ser un valor positivo o cero")
+    private Double horasTrabajo;
 
-    // El status en creación es opcional: si no se envía, el servicio asigna PENDING por defecto
+    @NotNull(message = "Las unidades de material son obligatorias")
+    @Min(value = 1, message = "Las unidades de material deben ser un valor positivo o cero")
+    private Integer unidadesMaterial;
+
+    private Double montoEstimado;
+
+    // El status en creación es opcional: si no se envía, el servicio asigna PENDING
+    // por defecto
     private Status status;
 }

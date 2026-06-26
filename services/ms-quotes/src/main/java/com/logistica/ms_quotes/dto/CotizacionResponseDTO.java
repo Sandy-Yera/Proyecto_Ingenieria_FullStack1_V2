@@ -2,7 +2,7 @@ package com.logistica.ms_quotes.dto;
 
 import java.time.LocalDateTime;
 
-import com.logistica.ms_quotes.model.Category;
+import com.logistica.ms_quotes.model.Categoria;
 import com.logistica.ms_quotes.model.Status;
 
 import lombok.AllArgsConstructor;
@@ -11,8 +11,10 @@ import lombok.NoArgsConstructor;
 
 /**
  * DTO DE SALIDA (RESPONSE) — CotizacionResponseDTO
- * Representa los datos de una Cotizacion que se devuelven al cliente tras cada operación.
- * Incluye el ID generado y el timestamp de creación, ambos campos de solo lectura.
+ * Representa los datos de una Cotizacion que se devuelven al cliente tras cada
+ * operación.
+ * Incluye el ID generado y el timestamp de creación, ambos campos de solo
+ * lectura.
  * Desacopla la respuesta HTTP de la entidad JPA interna.
  */
 @Data
@@ -24,7 +26,7 @@ public class CotizacionResponseDTO {
     private Long userId;
     private Long buildingId;
     private String description;
-    private Category category;
+    private Categoria category;
     private Double estimatedAmount;
     private Status status;
     private LocalDateTime createdAt;

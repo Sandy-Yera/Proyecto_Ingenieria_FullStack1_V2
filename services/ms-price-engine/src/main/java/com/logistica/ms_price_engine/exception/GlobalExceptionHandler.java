@@ -1,4 +1,4 @@
-package com.logistica.ms_quotes.exception;
+package com.logistica.ms_price_engine.exception;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -14,10 +14,10 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.logistica.ms_quotes.exception.entity.EntityBadRequestException;
-import com.logistica.ms_quotes.exception.entity.EntityConflictException;
-import com.logistica.ms_quotes.exception.entity.EntityCreationException;
-import com.logistica.ms_quotes.exception.entity.EntityNotFoundException;
+import com.logistica.ms_price_engine.exception.entity.EntityBadRequestException;
+import com.logistica.ms_price_engine.exception.entity.EntityConflictException;
+import com.logistica.ms_price_engine.exception.entity.EntityCreationException;
+import com.logistica.ms_price_engine.exception.entity.EntityNotFoundException;
 
 import feign.FeignException; // Asegúrate de incluir la dependencia de Feign en las excepciones si cruzas llamadas
 
@@ -61,7 +61,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    // ---- VALIDACIÓN DE JSON MALFORMADO ----
+    // ---- VALIDACIÓN DE JSON MALFORMADO O BODY AUSENTE ----
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Object> handleJsonError(HttpMessageNotReadableException ex) {
         Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST,

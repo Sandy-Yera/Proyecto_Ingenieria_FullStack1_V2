@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.logistica.ms_auth.dto.ActualizarUsernameDTO; 
+import com.logistica.ms_auth.dto.ActualizarUsernameDTO;
 import com.logistica.ms_auth.dto.UserCredencialRegisterDTO;
 import com.logistica.ms_auth.dto.UserCredencialResponseDTO;
 import com.logistica.ms_auth.exception.entity.EntityBadRequestException;
@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
 
 @RestController
 @RequestMapping("/api/auth")
@@ -88,7 +87,8 @@ public class UserCredencialController {
 
     /**
      * --- ACTUALIZAR POR ID CREDENCIAL ---
-     * Mapea a PUT /api/auth/{id} usando @PathVariable para capturar el identificador.
+     * Mapea a PUT /api/auth/{id} usando @PathVariable para capturar el
+     * identificador.
      */
     @PutMapping("/{id}")
     public ResponseEntity<UserCredencialResponseDTO> actualizarUser(
@@ -100,12 +100,13 @@ public class UserCredencialController {
     /**
      * 🟢 ENDPOINT REFACTORIZADO (Solución Etapa 3):
      * Mapea a PUT /api/auth/usuario/{userId}
-     * Ahora recibe únicamente ActualizarUsernameDTO, eliminando el riesgo de procesar o exigir passwords.
+     * Ahora recibe únicamente ActualizarUsernameDTO, eliminando el riesgo de
+     * procesar o exigir passwords.
      */
     @PutMapping("/usuario/{userId}")
     public ResponseEntity<UserCredencialResponseDTO> actualizarUserPorUserId(
             @Valid @RequestBody ActualizarUsernameDTO datosActualizados, // 🟢 Corrección: Tipo de DTO modificado
-            @PathVariable Long userId) { 
+            @PathVariable Long userId) {
         return ResponseEntity.ok(userCredencialService.actualizarPorUserId(userId, datosActualizados));
     }
 
@@ -120,11 +121,11 @@ public class UserCredencialController {
         return ResponseEntity.noContent().build();
     }
 
-
     /**
      * --- Métodos de login JWT ----
      */
-    // AuthController.java — añadir endpoint de login al UserCredencialController existente
+    // AuthController.java — añadir endpoint de login al UserCredencialController
+    // existente
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
         return ResponseEntity.ok(authService.login(dto));
@@ -132,12 +133,20 @@ public class UserCredencialController {
 
     // Endpoint de validación para que el Gateway pueda verificar tokens
     @GetMapping("/validate")
-    public ResponseEntity<Boolean> validateToken(
+    public ResponseEntity<Void> validateToken(
             @RequestHeader("Authorization") String authHeader) {
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.ok(false);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // 401
         }
+
         String token = authHeader.substring(7);
-        return ResponseEntity.ok(authService.validateToken(token));
+        boolean isValid = authService.validateToken(token);
+
+        if (isValid) {
+            return ResponseEntity.ok().build(); // 200 OK sin cuerpo
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // 401
+        }
     }
 }

@@ -8,28 +8,22 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.logistica.user.exception.entity.EntityBadRequestException;
 import com.logistica.user.exception.entity.EntityConflictException;
+import com.logistica.user.exception.entity.EntityCreationException;
 import com.logistica.user.exception.entity.EntityNotFoundException;
 
-import feign.FeignException;
+import feign.FeignException; // Asegúrate de incluir la dependencia de Feign en las excepciones si cruzas llamadas
 
-/**
- * CONTROLADOR GLOBAL DE EXCEPCIONES (ms-users)
- * OPTIMIZACIÓN: Se cambia @ControllerAdvice por @RestControllerAdvice para mejorar
- * el soporte de respuestas REST automatizadas y se estandariza el payload JSON.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Helper utilitario para mantener la misma estructura exacta de JSON 
-     * en todo el clúster de microservicios (Simetría con ms-auth).
-     */
     private Map<String, Object> crearBaseBody(HttpStatus status, String mensaje) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
@@ -39,47 +33,71 @@ public class GlobalExceptionHandler {
         return body;
     }
 
-    // ---- CORREGIDO: BAD REQUEST (400) ----
-    @ExceptionHandler(EntityBadRequestException.class)
-    public ResponseEntity<Object> handleUserBadRequest(EntityBadRequestException ex) {
-        // CORRECCIÓN: Se repara el bug donde se inyectaba el código de estatus 404 dentro de una respuesta 400
-        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST, ex.getMessage());
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
-    }
-
     // ---- NOT FOUND (404) ----
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<Object> handleUserNotFound(EntityNotFoundException ex) {
+    public ResponseEntity<Object> handleUserCredencialNotFound(EntityNotFoundException ex) {
         Map<String, Object> body = crearBaseBody(HttpStatus.NOT_FOUND, ex.getMessage());
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
     // ---- CONFLICT (409) ----
     @ExceptionHandler(EntityConflictException.class)
-    public ResponseEntity<Object> handleUserConflict(EntityConflictException ex) {
+    public ResponseEntity<Object> handleUserCredencialConflict(EntityConflictException ex) {
         Map<String, Object> body = crearBaseBody(HttpStatus.CONFLICT, ex.getMessage());
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
 
-    // ---- LIBRERÍA: VALIDACIÓN DE JSON MALFORMADO (400) ----
+    // ---- BAD REQUEST (400) ----
+    @ExceptionHandler(EntityBadRequestException.class)
+    public ResponseEntity<Object> handleUserCredencialBadRequest(EntityBadRequestException ex) {
+        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST, ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // ---- INTERNAL SERVER ERROR (500) ----
+    @ExceptionHandler(EntityCreationException.class)
+    public ResponseEntity<Object> handleUserCreationError(EntityCreationException ex) {
+        Map<String, Object> body = crearBaseBody(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // ---- VALIDACIÓN DE JSON MALFORMADO ----
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Object> handleJsonError(HttpMessageNotReadableException ex) {
-        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST, "Formato de JSON inválido o tipo de dato incorrecto en ms-users");
+        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST,
+                "Formato de JSON inválido o tipo de dato incorrecto");
         body.put("details", ex.getMostSpecificCause().getMessage());
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    // ---- LIBRERÍA: ERRORES DE ANOTACIONES EN DTOs / ENTIDADES (@Valid) ----
+    // ---- CONTENT-TYPE INCORRECTO O AUSENTE (415) ----
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Object> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
+        Map<String, Object> body = crearBaseBody(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "Content-Type no soportado. Asegúrate de enviar 'Content-Type: application/json'");
+        return new ResponseEntity<>(body, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    // ---- PARÁMETRO DE QUERY REQUERIDO FALTANTE (400) ----
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Object> handleMissingParam(MissingServletRequestParameterException ex) {
+        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST,
+                "Parámetro requerido ausente: '" + ex.getParameterName() + "'");
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // ---- VALIDACIÓN DE CAMPOS DTO (@Valid / @NotBlank) ----
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Object> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST, "Campos inválidos en la validación del perfil del usuario");
-        
-        // Mapeo funcional de los mensajes definidos en las anotaciones (@Email, @NotBlank, etc.)
+        Map<String, Object> body = crearBaseBody(HttpStatus.BAD_REQUEST,
+                "Errores de validación en los campos del formulario");
+
+        // Recolectamos los errores de forma limpia
         Map<String, String> errores = ex.getBindingResult().getFieldErrors().stream()
                 .collect(Collectors.toMap(
                         error -> error.getField(),
-                        error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "Campo no válido",
-                        (existente, nuevo) -> existente
+                        error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "Campo inválido",
+                        (existente, nuevo) -> existente // Evita duplicados en mapas
                 ));
 
         body.put("errors", errores);
@@ -87,25 +105,29 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * ---- BLINDAJE CRÍTICO PARA MICROSERVICIOS (FeignException) ----
-     * Captura de forma explícita cualquier error de comunicación con ms-auth.
-     * Evita que el sistema lance un error 500 genérico y propaga el estatus original del fallo remoto.
+     * ---- BLINDAJE PARA MICROSERVICIOS (FeignException) ----
+     * Captura las respuestas fallidas que vengan de peticiones HTTP remotas entre
+     * clústeres.
+     * Mantiene el código HTTP que arrojó el microservicio remoto en vez de
+     * transformarlo en un 500.
      */
     @ExceptionHandler(FeignException.class)
     public ResponseEntity<Object> handleFeignStatusException(FeignException ex) {
         HttpStatus status = HttpStatus.resolve(ex.status());
-        if (status == null) status = HttpStatus.INTERNAL_SERVER_ERROR;
+        if (status == null)
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
 
-        Map<String, Object> body = crearBaseBody(status, "Error de sincronización con el servicio remoto de autenticación (ms-auth)");
-        body.put("remoteDetails", ex.contentUTF8()); // Extrae el JSON de error que envió ms-auth
-        
+        Map<String, Object> body = crearBaseBody(status, "Error en comunicación con microservicio remoto");
+        body.put("remoteDetails", ex.contentUTF8()); // Rescata el JSON crudo del error del microservicio vecino
+
         return new ResponseEntity<>(body, status);
     }
 
-    // ---- COMODÍN: ERRORES INTERNOS INESPERADOS (500) ----
+    // ---- ERROR GENÉRICO INESPERADO (500) ----
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleGlobalException(Exception ex) {
-        Map<String, Object> body = crearBaseBody(HttpStatus.INTERNAL_SERVER_ERROR, "Ocurrió un error inesperado en el servidor de gestión de usuarios");
+        Map<String, Object> body = crearBaseBody(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Ocurrió un error inesperado en el servidor principal");
         body.put("details", ex.getMessage());
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }

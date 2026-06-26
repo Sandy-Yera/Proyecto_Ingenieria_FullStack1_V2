@@ -118,28 +118,39 @@ public class UserCredencialServiceImpl implements IUserCredencialService {
      * Sincroniza el correo aislando por completo las contraseñas.
      */
     @Transactional
-    public UserCredencialResponseDTO actualizarPorUserId(Long userId, ActualizarUsernameDTO dto) { // 🟢 Corrección: Tipo de DTO modificado
+    public UserCredencialResponseDTO actualizarPorUserId(Long userId, ActualizarUsernameDTO dto) { // 🟢 Corrección:
+                                                                                                   // Tipo de DTO
+                                                                                                   // modificado
         String traceId = request.getHeader("X-Trace-Id");
 
-        // Dado que el ID de la credencial mapea 1:1 con el ID del usuario, usamos findById
+        // Dado que el ID de la credencial mapea 1:1 con el ID del usuario, usamos
+        // findById
         UserCredencial credencialExistente = userCredencialRepository.findById(userId)
                 .orElseThrow(() -> {
-                    logProducer.sendLog("WARN", "Intento fallido de sincronizar correo. No existen credenciales para el ID de Usuario: " + userId + " | TraceId: " + traceId);
-                    return new EntityNotFoundException("No se encontraron credenciales de autenticación para el usuario con ID " + userId);
+                    logProducer.sendLog("WARN",
+                            "Intento fallido de sincronizar correo. No existen credenciales para el ID de Usuario: "
+                                    + userId + " | TraceId: " + traceId);
+                    return new EntityNotFoundException(
+                            "No se encontraron credenciales de autenticación para el usuario con ID " + userId);
                 });
 
-        // Validar que el nuevo correo electrónico no lo tenga tomado otro usuario en ms-auth
+        // Validar que el nuevo correo electrónico no lo tenga tomado otro usuario en
+        // ms-auth
         if (!credencialExistente.getUsername().equalsIgnoreCase(dto.getUsername()) &&
                 userCredencialRepository.existsByUsername(dto.getUsername())) {
-            logProducer.sendLog("WARN", "Conflicto de sincronización para Usuario ID " + userId + ". El Username '" + dto.getUsername() + "' ya existe en el sistema de seguridad. | TraceId: " + traceId);
-            throw new EntityConflictException("El nuevo correo electrónico ya se encuentra registrado por otro usuario.");
+            logProducer.sendLog("WARN", "Conflicto de sincronización para Usuario ID " + userId + ". El Username '"
+                    + dto.getUsername() + "' ya existe en el sistema de seguridad. | TraceId: " + traceId);
+            throw new EntityConflictException(
+                    "El nuevo correo electrónico ya se encuentra registrado por otro usuario.");
         }
 
-        // Sincronización atómica: Modificamos única y exclusivamente el username de manera segura
+        // Sincronización atómica: Modificamos única y exclusivamente el username de
+        // manera segura
         credencialExistente.setUsername(dto.getUsername());
 
-        logProducer.sendLog("INFO", "Sincronización de credencial exitosa. Username del Usuario ID " + userId + " cambiado a: " + dto.getUsername() + " | TraceId: " + traceId);
-        
+        logProducer.sendLog("INFO", "Sincronización de credencial exitosa. Username del Usuario ID " + userId
+                + " cambiado a: " + dto.getUsername() + " | TraceId: " + traceId);
+
         return convertirAResponseDTO(credencialExistente);
     }
 
@@ -165,5 +176,4 @@ public class UserCredencialServiceImpl implements IUserCredencialService {
         response.setLastLogin(userCredencial.getLastLogin());
         return response;
     }
-
 }
