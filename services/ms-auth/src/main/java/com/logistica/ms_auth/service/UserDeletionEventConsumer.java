@@ -36,16 +36,11 @@ public class UserDeletionEventConsumer {
             Long userId = event.getUserId();
 
             userCredencialRepository.findById(userId).ifPresent(credencial -> {
-                // Primero desactivar — el JwtService.validateToken consultará isActive
-                credencial.setIsActive(false);
-                userCredencialRepository.save(credencial); // flush inmediato del flag
-
-                // Luego eliminar el registro
                 userCredencialRepository.deleteById(userId);
 
                 logProducer.sendLog("INFO",
-                        "Credenciales y sesión activa del usuario ID " + userId
-                        + " invalidadas por evento de eliminación. | TraceId: " + event.getTraceId());
+                        "Credenciales del usuario ID " + userId
+                        + " eliminadas por evento de eliminación. | TraceId: " + event.getTraceId());
             });
         } catch (Exception e) {
             log.error("[ms-auth] Error procesando user-deleted: {}", e.getMessage(), e);

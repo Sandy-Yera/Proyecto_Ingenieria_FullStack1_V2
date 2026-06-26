@@ -82,7 +82,7 @@ El sistema se organiza en **6 fases lógicas** que componen los 17 microservicio
 | Servicio | Puerto | Descripción | Estado |
 |:---|:---|:---|:---|
 | `ms-quotes` | 8088 | Creación y seguimiento de cotizaciones (Swagger + Circuit Breaker) | ✅ Implementado |
-| `ms-price-engine` | 8095 | Motor automático de cálculo de precios | 🔲 Esqueleto |
+| `ms-price-engine` | 8095 | Motor automático de cálculo de precios por categoría, horas y materiales | ✅ Implementado |
 
 ### 🚚 Fase 4 — Recursos y Logística
 
@@ -155,9 +155,9 @@ El sistema se organiza en **6 fases lógicas** que componen los 17 microservicio
 - Control de integridad referencial entre entidades del dominio
 
 ### Comunicación entre Microservicios
-- **Síncrona:** OpenFeign para consultas en tiempo real (`ms-quotes` → `ms-users` + `ms-buildings`)
+- **Síncrona:** OpenFeign para consultas en tiempo real (`ms-quotes` → `ms-users` + `ms-buildings` + `ms-price-engine`)
 - **Asíncrona:** Apache Kafka para logs del sistema y eventos de ciclo de vida (eliminación de usuarios)
-- **Resiliencia:** Circuit Breaker (Resilience4j) en `ms-quotes` con configuración de ventana deslizante
+- **Resiliencia:** Circuit Breaker (Resilience4j) en `ms-quotes` con configuración de ventana deslizante y habilitado automáticamente sobre todos los clientes Feign
 
 ### Logs Estructurados
 - `ms-logs` consume eventos Kafka de múltiples servicios y expone consulta paginada
@@ -281,7 +281,7 @@ Todos los microservicios se registran automáticamente en Eureka y son accesible
 
 Realiza llamadas directamente a través del Gateway con Postman u otra herramienta REST.
 
-> **Estado actual:** Microservicios con CRUD completo operativo: `ms-users`, `ms-auth`, `ms-logs`, `ms-buildings`, `ms-staff`, `ms-security`, `ms-quotes`.
+> **Estado actual:** Microservicios con CRUD completo operativo: `ms-users`, `ms-auth`, `ms-logs`, `ms-buildings`, `ms-staff`, `ms-security`, `ms-quotes`, `ms-price-engine`.
 
 ---
 
@@ -393,8 +393,44 @@ Documentación Swagger disponible en `/swagger-ui.html`.
 
 **Notas:**
 - Categorías disponibles: `PLOMERIA`, `ELECTRICIDAD`, `GAS`.
-- Al crear una cotización, `ms-quotes` valida el usuario vía `ms-users` y el edificio vía `ms-buildings` usando OpenFeign.
-- Incluye **Circuit Breaker** (Resilience4j): si `ms-users` o `ms-buildings` fallan, el circuito se abre automáticamente.
+- Al crear una cotización, `ms-quotes` valida el usuario vía `ms-users`, el edificio vía `ms-buildings` y consulta el precio automático vía `ms-price-engine` usando OpenFeign. El cliente no envía el monto: lo calcula el motor de precios.
+- Incluye **Circuit Breaker** (Resilience4j): si cualquiera de los tres servicios remotos falla, el circuito se abre automáticamente.
+
+---
+
+### 💲 ms-price-engine — `/api/precios`
+
+Documentación Swagger disponible en `/swagger-ui.html`.
+
+| Método | Endpoint | Descripción | Respuesta exitosa |
+|:---|:---|:---|:---|
+| POST | `/api/precios/calcular` | Calcula el precio total de una reparación (body: `PrecioRequestDTO`) | `200 OK` con `PrecioResponseDTO` |
+
+**Body requerido (`PrecioRequestDTO`):**
+```json
+{
+  "categoria": "PLOMERIA",
+  "horasTrabajo": 3.5,
+  "unidadesMaterial": 2
+}
+```
+
+**Respuesta (`PrecioResponseDTO`):**
+```json
+{
+  "categoria": "PLOMERIA",
+  "horasTrabajo": 3.5,
+  "unidadesMaterial": 2,
+  "costoLaboral": 87500.0,
+  "costoMateriales": 16000.0,
+  "montoTotal": 103500.0
+}
+```
+
+**Notas:**
+- Categorías disponibles: `PLOMERIA`, `ELECTRICIDAD`, `GAS`.
+- Las tarifas base se inicializan automáticamente al arrancar el servicio (`DataInitializer`): PLOMERIA (25.000/hora, 8.000/unidad), ELECTRICIDAD (30.000/hora, 12.000/unidad), GAS (35.000/hora, 15.000/unidad).
+- Este endpoint es llamado internamente por `ms-quotes` vía OpenFeign al crear una cotización.
 
 ---
 
