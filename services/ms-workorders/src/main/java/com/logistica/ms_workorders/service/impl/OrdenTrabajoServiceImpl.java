@@ -10,6 +10,7 @@ import com.logistica.ms_workorders.dto.OrdenTrabajoRequestDTO;
 import com.logistica.ms_workorders.dto.OrdenTrabajoResponseDTO;
 import com.logistica.ms_workorders.dto.feign.BloqueFeignRequestDTO;
 import com.logistica.ms_workorders.exception.entity.EntityBadRequestException;
+import com.logistica.ms_workorders.exception.entity.EntityConflictException;
 import com.logistica.ms_workorders.exception.entity.EntityNotFoundException;
 import com.logistica.ms_workorders.model.EstadoOrden;
 import com.logistica.ms_workorders.model.OrdenTrabajo;
@@ -177,7 +178,7 @@ public class OrdenTrabajoServiceImpl implements OrdenTrabajoService {
                         "Orden de trabajo no encontrada con ID: " + id));
 
         if (orden.getEstado() == EstadoOrden.COMPLETED) {
-            throw new EntityBadRequestException(
+            throw new EntityConflictException(
                     "No se puede cancelar una orden ya COMPLETED.");
         }
 
@@ -190,9 +191,13 @@ public class OrdenTrabajoServiceImpl implements OrdenTrabajoService {
     @Override
     @Transactional
     public void eliminarOrden(Long id) {
-        if (!repository.existsById(id)) {
-            throw new EntityNotFoundException(
-                    "No se puede eliminar. Orden con ID " + id + " no existe.");
+        OrdenTrabajo orden = repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "No se puede eliminar. Orden con ID " + id + " no existe."));
+        if (orden.getEstado() != EstadoOrden.PENDING && orden.getEstado() != EstadoOrden.CANCELLED) {
+            throw new EntityConflictException(
+                    "Solo se pueden eliminar órdenes en estado PENDING o CANCELLED. Estado actual: "
+                            + orden.getEstado());
         }
         repository.deleteById(id);
         log.info("[ms-workorders] Orden eliminada id={}", id);
