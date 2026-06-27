@@ -48,7 +48,42 @@ spring:
         - id: ms-fleet
           uri: lb://ms-fleet
           predicates:
-            - Path=/api/vehiculos/**
+            - Path=/api/fleet/**
+
+        - id: ms-staff
+          uri: lb://ms-staff
+          predicates:
+            - Path=/api/v1/staff/**
+
+        - id: ms-schedule
+          uri: lb://ms-schedule
+          predicates:
+            - Path=/api/schedule/**
+
+        - id: ms-inventory
+          uri: lb://ms-inventory
+          predicates:
+            - Path=/api/inventory/**
+
+        - id: ms-purchase
+          uri: lb://ms-purchase
+          predicates:
+            - Path=/api/purchase/**
+
+        - id: ms-price-engine
+          uri: lb://ms-price-engine
+          predicates:
+            - Path=/api/precios/**
+
+        - id: ms-workorders
+          uri: lb://ms-workorders
+          predicates:
+            - Path=/api/workorders/**
+
+        - id: ms-logistics
+          uri: lb://ms-logistics
+          predicates:
+            - Path=/api/logistics/**
 
 # Monitoreo Actuator para verificación de mallas distribuidas
 management:
