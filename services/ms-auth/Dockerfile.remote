@@ -1,0 +1,46 @@
+# ========================================================
+# Variante de despliegue remoto (Railway/Render)
+# El Dockerfile local de este servicio asume un JAR ya compilado
+# (vía compile-only.sh). Esta variante compila el JAR dentro de la
+# propia imagen, para que Railway pueda construirla sin pasos previos.
+#   docker build -f services/ms-auth/Dockerfile.remote -t ms-auth-remote services/ms-auth
+# ========================================================
+
+# ========================================================
+# Etapa 1: Descarga de dependencias (Cacheable)
+# ========================================================
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS deps
+WORKDIR /app
+
+COPY pom.xml .
+RUN mvn dependency:go-offline -B -Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.pool=false
+
+# ========================================================
+# Etapa 2: Compilación y empaquetado (Builder)
+# ========================================================
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
+WORKDIR /app
+
+COPY --from=deps /root/.m2 /root/.m2
+COPY --from=deps /app /app
+
+COPY src ./src
+
+RUN mvn package -DskipTests -B
+
+# ========================================================
+# Etapa 3: Imagen de ejecución ultra-ligera y segura (Runner)
+# ========================================================
+FROM eclipse-temurin:21-jre-alpine AS runner
+WORKDIR /app
+
+RUN addgroup -S brm && adduser -S brm -G brm
+
+COPY --from=builder /app/target/*.jar app.jar
+RUN chown -R brm:brm /app
+
+USER brm
+
+EXPOSE 8081
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
