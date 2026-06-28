@@ -85,6 +85,21 @@ spring:
           predicates:
             - Path=/api/logistics/**
 
+        - id: ms-billing
+          uri: lb://ms-billing
+          predicates:
+            - Path=/api/billing/**
+
+        - id: ms-payments
+          uri: lb://ms-payments
+          predicates:
+            - Path=/api/payments/**
+
+        - id: ms-notifications
+          uri: lb://ms-notifications
+          predicates:
+            - Path=/api/notifications/**
+
 # Monitoreo Actuator para verificación de mallas distribuidas
 management:
   endpoints:
