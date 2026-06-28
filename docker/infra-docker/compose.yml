@@ -67,9 +67,9 @@ services:
           "timeout 1s bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/2181'",
         ]
       interval: 10s
-      timeout: 2s
-      retries: 5
-      start_period: 30s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -100,9 +100,9 @@ services:
       test:
         ["CMD", "kafka-topics", "--bootstrap-server", "kafka:29092", "--list"]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      timeout: 15s
+      retries: 8
+      start_period: 90s
 
   eureka-server:
     build: ../../infraestructure/eureka-server

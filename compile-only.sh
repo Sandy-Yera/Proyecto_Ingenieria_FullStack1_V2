@@ -109,12 +109,20 @@ if [ $COMPILE_STATUS -eq 0 ]; then
         echo -e "${YELLOW}🔄 Reconstruyendo en Docker los contenedores seleccionados: [$COMPOSE_SERVICES ]...${NC}"
         docker compose -f docker/infra-docker/compose.yml up --build -d $COMPOSE_SERVICES
     else
-        # MODO GENERAL: Verificación inteligente preventiva de desincronización de clúster Kafka
-        KAFKA_STATUS=$(docker inspect -f '{{.State.Status}}' brm-kafka 2>/dev/null)
-        
-        if [ "$KAFKA_STATUS" = "exited" ] || [ "$KAFKA_STATUS" = "unhealthy" ]; then
-            echo -e "${YELLOW}⚠️  Se detectó anomalía o parada forzada en Kafka. Ejecutando resincronización preventiva de IDs...${NC}"
-            docker compose -f docker/infra-docker/compose.yml down -v 2>/dev/null || true
+        # MODO GENERAL: Verificación de desincronización REAL de cluster ID Kafka/Zookeeper.
+        # OJO: un estado "unhealthy" por sí solo NO es señal confiable de corrupción (puede ser
+        # solo saturación de CPU al levantar todo el stack a la vez). Solo reseteamos si el log
+        # de Kafka confirma el error real (InconsistentClusterIdException), y solo tocamos los
+        # volúmenes de kafka/zookeeper (nunca "down -v" del stack completo, que también borraría
+        # la base de datos MySQL).
+        if docker logs brm-kafka --tail=50 2>/dev/null | grep -q "InconsistentClusterIdException"; then
+            echo -e "${YELLOW}⚠️  Cluster ID de Kafka desincronizado respecto a Zookeeper. Reseteando solo sus volúmenes...${NC}"
+            KAFKA_VOL=$(docker inspect brm-kafka --format '{{ (index .Mounts 0).Name }}' 2>/dev/null)
+            ZK_VOL=$(docker inspect brm-zookeeper --format '{{ (index .Mounts 0).Name }}' 2>/dev/null)
+            docker compose -f docker/infra-docker/compose.yml stop kafka zookeeper 2>/dev/null
+            docker compose -f docker/infra-docker/compose.yml rm -f kafka zookeeper 2>/dev/null
+            [ -n "$KAFKA_VOL" ] && docker volume rm "$KAFKA_VOL"
+            [ -n "$ZK_VOL" ] && docker volume rm "$ZK_VOL"
         fi
 
         echo -e "${GREEN}⚡ Encendiendo todo el ecosistema de contenedores de forma ultra veloz...${NC}"
