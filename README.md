@@ -589,3 +589,77 @@ Documentación Swagger disponible en `/swagger-ui/index.html`.
 ```
 
 Todos los endpoints accesibles vía Gateway: `http://localhost:9090/{path}`
+
+---
+
+## ☁️ Despliegue Remoto (Railway) — Subconjunto Mínimo
+
+> **Estado:** Configuración local preparada (perfil `remote`, Dockerfile alternativo, variables documentadas). El despliegue real en Railway **no se ha ejecutado** — queda a cargo del equipo, siguiendo los pasos de esta sección.
+
+### Subconjunto de servicios a desplegar
+
+Para una primera validación remota se desplegará un subconjunto mínimo que cubre el flujo completo de cotización → orden de trabajo, sin dependencias de Kafka:
+
+| Servicio | Incluido | Motivo de inclusión/exclusión |
+|:---|:---|:---|
+| `eureka-server` | ✅ | Descubrimiento de servicios, requerido por todos |
+| `config-server` | ✅ | Configuración centralizada, requerido por todos |
+| `api-gateway` | ✅ | Punto de entrada único |
+| `ms-auth` | ✅ | Login/JWT, requerido para el flujo |
+| `ms-users` | ✅ | Gestión de usuarios |
+| `ms-buildings` | ✅ | Catálogo de edificios |
+| `ms-price-engine` | ✅ | Cálculo de precios para cotizaciones |
+| `ms-quotes` | ✅ | Cotizaciones |
+| `ms-workorders` | ✅ | Órdenes de trabajo |
+| `ms-logs` | ❌ | Requiere Kafka, fuera de alcance del subconjunto remoto |
+| `ms-security` | ❌ | No crítico para el flujo mínimo |
+| `ms-staff`, `ms-fleet`, `ms-schedule`, `ms-inventory`, `ms-purchase` | ❌ | No críticos para el flujo mínimo |
+| `ms-logistics` | ❌ | Depende de `ms-fleet`, excluido |
+| `ms-payments`, `ms-billing`, `ms-notifications` | ❌ | Fuera del flujo mínimo de validación |
+
+> No se intenta levantar Kafka en este despliegue remoto. Cualquier servicio que dependa de Kafka queda excluido del subconjunto inicial.
+
+### Perfil `remote`
+
+Se agregó un perfil Spring `remote` en `config-repo/`, análogo al perfil `docker` ya existente, pero apuntando a variables de entorno en vez de hostnames fijos:
+
+- `config-repo/application-remote.yml`: overrides globales (`spring.datasource.*` vía `${DATABASE_URL}`/`${DATABASE_USERNAME}`/`${DATABASE_PASSWORD}`, `eureka.client.serviceUrl.defaultZone` vía `${EUREKA_URL}`, `eureka.instance.hostname` vía `${RAILWAY_STATIC_URL}`).
+- `config-repo/{ms-auth,ms-users,ms-buildings,ms-price-engine,ms-quotes,ms-workorders}-remote.yml`: overrides de `server.port` (vía `${PORT}`) y datasource por servicio. `ms-price-engine`, `ms-quotes` y `ms-workorders` agregan además `app.gateway-url` (vía `${APP_GATEWAY_URL}`), consumido por sus `SwaggerConfig.java` para anunciar la URL pública del Gateway sin hardcodear el hostname en código.
+
+El Config Server resuelve estos archivos automáticamente por convención de nombres (`{application}-{profile}.yml`) cuando cada servicio arranca con `SPRING_PROFILES_ACTIVE=remote`, sin requerir cambios de código en el Config Server.
+
+### Imagen remota del Config Server
+
+El `Dockerfile` original de `config-server` monta `config-repo` como **volumen externo**, lo cual funciona en Docker Compose pero no en Railway (no soporta bind-mounts de host). Se agregó `infraestructure/config-server/Dockerfile.remote`, que en su lugar **copia `config-repo` dentro de la imagen** en build time. El build debe ejecutarse con la raíz del repositorio como contexto:
+
+```bash
+docker build -f infraestructure/config-server/Dockerfile.remote -t config-server-remote .
+```
+
+### Orden de despliegue sugerido
+
+1. **MySQL** (plugin administrado de Railway, o una base por servicio usando el `createDatabaseIfNotExist=true` ya presente en las URLs JDBC)
+2. `eureka-server`
+3. `config-server` (con la imagen `Dockerfile.remote`)
+4. `ms-auth` → `ms-users` → `ms-buildings` → `ms-price-engine` → `ms-quotes` → `ms-workorders`
+5. `api-gateway` (al final, ya que enruta hacia todos los anteriores)
+
+### Variables de entorno por servicio
+
+| Variable | Aplica a | Descripción |
+|:---|:---|:---|
+| `SPRING_PROFILES_ACTIVE=remote` | Todos los servicios de negocio + `api-gateway` | Activa el perfil `remote` |
+| `SPRING_CONFIG_IMPORT=optional:configserver:http://{config-server-url}/` | Todos los servicios de negocio + `api-gateway` | URL pública/interna del Config Server en Railway |
+| `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD` | Todos los servicios con base de datos | Credenciales de la instancia MySQL en Railway |
+| `EUREKA_URL` | Todos los servicios | URL del Eureka Server en Railway (`http://{host}/eureka/`) |
+| `RAILWAY_STATIC_URL` | Todos los servicios | Hostname público asignado por Railway, usado para el registro en Eureka |
+| `APP_GATEWAY_URL` | `ms-price-engine`, `ms-quotes`, `ms-workorders` | URL pública del API Gateway, mostrada en Swagger como servidor alternativo |
+| `PORT` | Todos los servicios | Puerto inyectado por Railway (ya soportado vía `${PORT:...}` en cada `*.yml`) |
+
+### Verificación posterior al despliegue
+
+Una vez desplegado por el equipo:
+
+1. Confirmar en el dashboard de Eureka que los 9 servicios del subconjunto aparecen `UP`.
+2. Probar el flujo mínimo a través del Gateway: `POST /api/auth/login`, `POST /api/users`, `POST /api/edificios`, `POST /api/cotizaciones`.
+3. Reemplazar los placeholders de esta sección por las URLs reales una vez completado el despliegue (Eureka, API Gateway, Swagger de `ms-workorders`/`ms-quotes`).

@@ -1,0 +1,54 @@
+# ========================================================
+# Variante de despliegue remoto (Railway/Render)
+# Difiere del Dockerfile local únicamente en que el config-repo
+# se COPIA dentro de la imagen en build time, ya que estas plataformas
+# no soportan el bind-mount de volumen externo usado en docker-compose.
+# El build context para esta imagen debe ser la raíz del repositorio,
+# de forma que tanto infraestructure/config-server como config-repo
+# sean visibles, p. ej.:
+#   docker build -f infraestructure/config-server/Dockerfile.remote -t config-server-remote .
+# ========================================================
+
+# ========================================================
+# Etapa 1: Descarga de dependencias (Cacheable)
+# ========================================================
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS deps
+WORKDIR /app
+
+COPY infraestructure/config-server/pom.xml .
+RUN mvn dependency:go-offline -B -Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.pool=false
+
+# ========================================================
+# Etapa 2: Compilación y empaquetado (Builder)
+# ========================================================
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
+WORKDIR /app
+
+COPY --from=deps /root/.m2 /root/.m2
+COPY --from=deps /app /app
+
+COPY infraestructure/config-server/src ./src
+
+RUN mvn package -DskipTests -B
+
+# ========================================================
+# Etapa 3: Imagen de ejecución ultra-ligera y segura (Runner)
+# ========================================================
+FROM eclipse-temurin:21-jre-alpine AS runner
+WORKDIR /app
+
+RUN addgroup -S brm && adduser -S brm -G brm
+
+COPY --from=builder /app/target/*.jar app.jar
+
+# Diferencia clave vs. el Dockerfile local: el config-repo se copia
+# dentro de la imagen (no se monta como volumen externo), ya que
+# Railway/Render despliegan a partir de una sola imagen sin volúmenes.
+COPY config-repo /app/config-repo
+RUN chown -R brm:brm /app
+
+USER brm
+
+EXPOSE 8888
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

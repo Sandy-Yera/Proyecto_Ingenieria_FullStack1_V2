@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
     ),
     servers = {
         @Server(url = "http://localhost:8086", description = "Servidor local"),
-        @Server(url = "http://api-gateway:8080/ms-quotes", description = "A través del API Gateway")
+        @Server(url = "${app.gateway-url:http://api-gateway:8080}/ms-quotes", description = "A través del API Gateway")
     }
 )
 @Configuration

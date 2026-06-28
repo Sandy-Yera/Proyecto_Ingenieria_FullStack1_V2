@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Configuration;
         +
         "Permite calcular precios basados en categorías, horas de trabajo y unidades de material.", version = "1.0.0", contact = @Contact(name = "Equipo BRM", email = "soporte@logistica.com")), servers = {
                 @Server(url = "http://localhost:8095", description = "Servidor local"),
-                @Server(url = "http://api-gateway:8080/ms-price-engine", description = "A través del API Gateway")
+                @Server(url = "${app.gateway-url:http://api-gateway:8080}/ms-price-engine", description = "A través del API Gateway")
         })
 @Configuration
 public class SwaggerConfig {
