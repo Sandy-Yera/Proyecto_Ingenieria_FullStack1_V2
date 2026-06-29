@@ -117,9 +117,9 @@ El sistema se organiza en **6 fases lógicas** que componen los 17 microservicio
 
 | Servicio | Puerto | Descripción | Estado |
 |:---|:---|:---|:---|
-| `ms-payments` | 8091 | Procesamiento de pagos asociados a facturas | 🔲 Pendiente |
-| `ms-billing` | 8092 | Generación de facturas al cierre de la orden | 🔲 Pendiente |
-| `ms-notifications` | 8094 | Notificaciones persistidas + consumer Kafka de telemetría | 🔲 Pendiente |
+| `ms-payments` | 8091 | Procesamiento de pagos asociados a facturas | ✅ Implementado |
+| `ms-billing` | 8092 | Generación de facturas al cierre de la orden | ✅ Implementado |
+| `ms-notifications` | 8094 | Notificaciones persistidas + consumer Kafka de telemetría | ✅ Implementado |
 
 ---
 
@@ -299,7 +299,7 @@ Todos los microservicios se registran automáticamente en Eureka y son accesible
 
 Realiza llamadas a través del Gateway con Postman u otra herramienta REST.
 
-> **Estado actual:** Fases 1–4 completamente operativas. Gateway enruta a los 14 servicios implementados. Fase 5 (ms-billing, ms-payments, ms-notifications) pendiente de implementación.
+> **Estado actual:** Fases 1–5 completamente operativas. Gateway enruta a los 17 microservicios de negocio implementados.
 
 ---
 
@@ -443,6 +443,7 @@ Realiza llamadas a través del Gateway con Postman u otra herramienta REST.
 |:---|:---|:---|:---|
 | GET | `/api/purchase` | Lista todas las compras | `200 OK` / `204 No Content` |
 | GET | `/api/purchase/{id}` | Obtiene una compra por ID | `200 OK` / `404 Not Found` |
+| GET | `/api/purchase/material/{materialId}` | Lista compras de un material | `200 OK` / `204 No Content` |
 | POST | `/api/purchase` | Registra una compra y reabastece el inventario automáticamente vía Feign | `201 Created` |
 | PUT | `/api/purchase/{id}` | Actualiza una compra | `200 OK` |
 | DELETE | `/api/purchase/{id}` | Elimina una compra por ID | `204 No Content` |
@@ -476,7 +477,7 @@ Documentación Swagger disponible en `/swagger-ui/index.html`.
 
 | Método | Endpoint | Descripción | Respuesta exitosa |
 |:---|:---|:---|:---|
-| POST | `/api/precios/calcular` | Calcula el precio total de una reparación | `200 OK` con `PrecioResponseDTO` |
+| POST | `/api/precios/calcular` | Calcula el precio total de una reparación | `201 Created` con `PrecioResponseDTO` |
 
 **Body requerido (`PrecioRequestDTO`):**
 ```json
@@ -581,6 +582,74 @@ Documentación Swagger disponible en `/swagger-ui/index.html`.
 | `level` | String | (ninguno) | Filtra por nivel (`INFO`, `WARN`, `ERROR`) |
 | `page` | int | `0` | Número de página |
 | `size` | int | `50` | Registros por página |
+
+---
+
+### 🧾 ms-billing — `/api/billing`
+
+| Método | Endpoint | Descripción | Request Body | Respuesta exitosa |
+|:---|:---|:---|:---|:---|
+| POST | `/api/billing/facturas` | Emite una factura para una orden completada | `FacturaRequestDTO` | `201 Created` |
+| GET | `/api/billing/facturas` | Lista todas las facturas | — | `200 OK` / `204 No Content` |
+| GET | `/api/billing/facturas/{id}` | Obtiene una factura por ID | — | `200 OK` / `404 Not Found` |
+| GET | `/api/billing/facturas/workorder/{woId}` | Filtra por orden de trabajo | — | `200 OK` / `204 No Content` |
+| GET | `/api/billing/facturas/tecnico/{tecnicoId}` | Filtra por técnico | — | `200 OK` / `204 No Content` |
+| GET | `/api/billing/facturas/estado/{estado}` | Filtra por estado | — | `200 OK` / `204 No Content` |
+| PUT | `/api/billing/facturas/{id}/pagar` | Marca la factura como pagada | `CambioEstadoRequestDTO` | `200 OK` / `404 Not Found` / `409 Conflict` |
+| PUT | `/api/billing/facturas/{id}/anular` | Anula la factura | `CambioEstadoRequestDTO` | `200 OK` / `404 Not Found` / `409 Conflict` |
+| DELETE | `/api/billing/facturas/{id}` | Elimina una factura | — | `204 No Content` / `404 Not Found` / `409 Conflict` |
+
+---
+
+### 💳 ms-payments — `/api/payments`
+
+| Método | Endpoint | Descripción | Request Body | Respuesta exitosa |
+|:---|:---|:---|:---|:---|
+| POST | `/api/payments/pagos` | Procesa un pago asociado a una factura | `PagoRequestDTO` | `201 Created` |
+| GET | `/api/payments/pagos` | Lista todos los pagos | — | `200 OK` / `204 No Content` |
+| GET | `/api/payments/pagos/{id}` | Obtiene un pago por ID | — | `200 OK` / `404 Not Found` |
+| GET | `/api/payments/pagos/factura/{facturaId}` | Filtra por factura | — | `200 OK` / `204 No Content` |
+| GET | `/api/payments/pagos/estado/{estado}` | Filtra por estado | — | `200 OK` / `204 No Content` |
+| GET | `/api/payments/pagos/metodo/{metodoPago}` | Filtra por método de pago | — | `200 OK` / `204 No Content` |
+| PUT | `/api/payments/pagos/{id}/fallido` | Marca el pago como fallido | `CambioEstadoRequestDTO` | `200 OK` / `404 Not Found` / `409 Conflict` |
+
+---
+
+### 🔔 ms-notifications — `/api/notifications`
+
+| Método | Endpoint | Descripción | Request Body | Respuesta exitosa |
+|:---|:---|:---|:---|:---|
+| POST | `/api/notifications/notificaciones` | Crea una notificación | `NotificacionRequestDTO` | `201 Created` |
+| GET | `/api/notifications/notificaciones` | Lista todas las notificaciones | — | `200 OK` / `204 No Content` |
+| GET | `/api/notifications/notificaciones/{id}` | Obtiene una notificación por ID | — | `200 OK` / `404 Not Found` |
+| GET | `/api/notifications/notificaciones/destinatario/{destinatarioId}` | Filtra por destinatario | — | `200 OK` / `204 No Content` |
+| GET | `/api/notifications/notificaciones/no-leidas/{destinatarioId}` | Lista no leídas de un destinatario | — | `200 OK` / `204 No Content` |
+| GET | `/api/notifications/notificaciones/no-leidas/{destinatarioId}/count` | Cuenta no leídas de un destinatario | — | `200 OK` |
+| GET | `/api/notifications/notificaciones/tipo/{tipo}` | Filtra por tipo de notificación | — | `200 OK` / `204 No Content` |
+| PUT | `/api/notifications/notificaciones/{id}/leer` | Marca la notificación como leída | — | `200 OK` / `404 Not Found` |
+| DELETE | `/api/notifications/notificaciones/{id}` | Elimina una notificación | — | `204 No Content` / `404 Not Found` |
+
+**Notas:**
+- `ms-notifications` también incluye un consumer Kafka que persiste eventos de telemetría de `ms-fleet` (`POST /location`) como notificaciones automáticas.
+
+---
+
+## 🔐 Seguridad y JWT — nota sobre `permitAll()`
+
+> Tanto `api-gateway` (`infraestructure/api-gateway/.../config/SecurityConfig.java`) como
+> `ms-auth` (`services/ms-auth/.../config/SecurityConfig.java`) están configurados con
+> `.anyExchange().permitAll()` / `.anyRequest().permitAll()` respectivamente. Esto es
+> **intencional**: `ms-auth` emite tokens JWT (`POST /api/auth/login`), pero ningún
+> microservicio ni el gateway exigen ese token todavía — se deja así para poder probar
+> y demostrar todos los endpoints libremente (Postman, Swagger) sin gestionar tokens en
+> cada request durante la evaluación.
+>
+> Para activar la exigencia de JWT solo hace falta cambiar **una línea** en cada
+> archivo: reemplazar `.anyExchange().permitAll()` (api-gateway, línea 18 de
+> `SecurityConfig.java`) y `.anyRequest().permitAll()` (ms-auth, línea 21 de
+> `SecurityConfig.java`) por una regla `.authenticated()` (o equivalente con
+> `.requestMatchers(...).permitAll()` para las rutas públicas como `/login`) más el
+> filtro JWT correspondiente en la cadena de seguridad.
 
 ---
 

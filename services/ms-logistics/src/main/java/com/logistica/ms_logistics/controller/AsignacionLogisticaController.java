@@ -114,7 +114,7 @@ public class AsignacionLogisticaController {
     })
     @PutMapping("/asignaciones/{id}/completar")
     public ResponseEntity<AsignacionResponseDTO> completar(
-            @PathVariable Long id, @RequestBody CambioEstadoRequestDTO dto) {
+            @PathVariable Long id, @Valid @RequestBody CambioEstadoRequestDTO dto) {
         return ResponseEntity.ok(service.completar(id, dto));
     }
 
@@ -127,7 +127,7 @@ public class AsignacionLogisticaController {
     })
     @PutMapping("/asignaciones/{id}/cancelar")
     public ResponseEntity<AsignacionResponseDTO> cancelar(
-            @PathVariable Long id, @RequestBody CambioEstadoRequestDTO dto) {
+            @PathVariable Long id, @Valid @RequestBody CambioEstadoRequestDTO dto) {
         return ResponseEntity.ok(service.cancelar(id, dto));
     }
 

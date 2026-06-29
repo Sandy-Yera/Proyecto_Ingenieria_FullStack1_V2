@@ -118,7 +118,7 @@ public class PagoController {
     })
     @PutMapping("/pagos/{id}/fallido")
     public ResponseEntity<PagoResponseDTO> marcarFallido(
-            @PathVariable Long id, @RequestBody CambioEstadoRequestDTO dto) {
+            @PathVariable Long id, @Valid @RequestBody CambioEstadoRequestDTO dto) {
         return ResponseEntity.ok(pagoService.marcarFallido(id, dto));
     }
 }

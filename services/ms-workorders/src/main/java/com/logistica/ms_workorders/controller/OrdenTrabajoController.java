@@ -143,7 +143,7 @@ public class OrdenTrabajoController {
     })
     @PutMapping("/{id}/completar")
     public ResponseEntity<OrdenTrabajoResponseDTO> completarTrabajo(
-            @PathVariable Long id, @RequestBody CambioEstadoRequestDTO dto) {
+            @PathVariable Long id, @Valid @RequestBody CambioEstadoRequestDTO dto) {
         return ResponseEntity.ok(ordenTrabajoService.completarTrabajo(id, dto));
     }
 
@@ -156,7 +156,7 @@ public class OrdenTrabajoController {
     })
     @PutMapping("/{id}/cancelar")
     public ResponseEntity<OrdenTrabajoResponseDTO> cancelarOrden(
-            @PathVariable Long id, @RequestBody CambioEstadoRequestDTO dto) {
+            @PathVariable Long id, @Valid @RequestBody CambioEstadoRequestDTO dto) {
         return ResponseEntity.ok(ordenTrabajoService.cancelarOrden(id, dto));
     }
 

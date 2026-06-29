@@ -25,7 +25,7 @@ public class StaffRequestDTO {
     private Especialidad especialidad;
  
     @NotNull(message = "El nivel de experiencia es obligatorio")
-    private Experiencia Experiencia;
+    private Experiencia experiencia;
  
     @NotNull(message = "El estado de disponibilidad es obligatorio")
     private Boolean estadoDisponibilidad;

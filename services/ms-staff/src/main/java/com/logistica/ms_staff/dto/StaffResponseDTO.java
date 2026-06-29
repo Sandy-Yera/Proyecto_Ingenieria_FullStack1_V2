@@ -16,7 +16,7 @@ public class StaffResponseDTO {
 
     private Long id;
     private Especialidad especialidad;
-    private Experiencia Experiencia;
+    private Experiencia experiencia;
     private Boolean estadoDisponibilidad;
     private String certificacionSec;
     private LocalDateTime createdAt;

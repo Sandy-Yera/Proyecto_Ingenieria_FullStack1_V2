@@ -118,7 +118,7 @@ public class FacturaController {
     })
     @PutMapping("/facturas/{id}/pagar")
     public ResponseEntity<FacturaResponseDTO> pagarFactura(
-            @PathVariable Long id, @RequestBody CambioEstadoRequestDTO dto) {
+            @PathVariable Long id, @Valid @RequestBody CambioEstadoRequestDTO dto) {
         return ResponseEntity.ok(facturaService.pagarFactura(id, dto));
     }
 
@@ -131,7 +131,7 @@ public class FacturaController {
     })
     @PutMapping("/facturas/{id}/anular")
     public ResponseEntity<FacturaResponseDTO> anularFactura(
-            @PathVariable Long id, @RequestBody CambioEstadoRequestDTO dto) {
+            @PathVariable Long id, @Valid @RequestBody CambioEstadoRequestDTO dto) {
         return ResponseEntity.ok(facturaService.anularFactura(id, dto));
     }
 
