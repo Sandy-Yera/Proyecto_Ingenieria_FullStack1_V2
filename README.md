@@ -35,6 +35,18 @@ El ecosistema está compuesto por **17 microservicios de negocio** + 3 servicios
 
 ---
 
+## 🗂️ Planificación y Comunicación del Equipo
+
+El equipo organizó el trabajo y la comunicación durante todo el desarrollo del proyecto mediante las siguientes herramientas:
+
+| Herramienta | Uso |
+|:---|:---|
+| **Trello** | Tablero de gestión de tareas para distribuir y dar seguimiento al avance de cada integrante por fase del proyecto. Revisado directamente con el profesor durante el curso. |
+| **WhatsApp** | Coordinación diaria y resolución rápida de dudas entre los integrantes. |
+| **Discord** | Reuniones de trabajo con voz y pantalla compartida para resolver bloqueos técnicos y revisar avances en conjunto. |
+
+---
+
 ## 🛠️ Stack Tecnológico
 
 | Componente | Tecnología |
