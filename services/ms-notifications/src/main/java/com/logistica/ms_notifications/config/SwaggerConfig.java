@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
     ),
     servers = {
         @Server(url = "http://localhost:8094", description = "Local"),
-        @Server(url = "http://api-gateway:8080/ms-notifications", description = "Via Gateway")
+        @Server(url = "${app.gateway-url:http://api-gateway:8080}/ms-notifications", description = "Via Gateway")
     }
 )
 @Configuration

@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
     ),
     servers = {
         @Server(url = "http://localhost:8091", description = "Local"),
-        @Server(url = "http://api-gateway:8080/ms-payments", description = "Via Gateway")
+        @Server(url = "${app.gateway-url:http://api-gateway:8080}/ms-payments", description = "Via Gateway")
     }
 )
 @Configuration

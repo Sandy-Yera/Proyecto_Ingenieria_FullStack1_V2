@@ -30,12 +30,22 @@ spring:
         createDatabaseIfNotExist: true
 
 logging:
+  file:
+    name: /app/logs/${spring.application.name}.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 5
+      clean-history-on-start: false
   level:
     root: INFO
     com.logistica: DEBUG # Muestra tus controladores y servicios de todos los MS de forma segura
 
 server:
   forward-headers-strategy: framework
+
+app:
+  gateway-url: http://localhost:9090
 
 springdoc:
   api-docs:

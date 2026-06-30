@@ -1,5 +1,36 @@
+# Archivos comprimidos y multimedia
 *.zip
 *.rar
 *.tar.gz
 *.mp4
 *.avi
+
+# Maven - binarios compilados (obligatorio según directrices del curso)
+target/
+*.jar
+*.war
+*.ear
+
+# Scripts de despliegue (prohibidos según directrices del curso)
+*.bat
+*.sh
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# Logs
+*.log
+logs/
+
+# Variables de entorno locales
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
