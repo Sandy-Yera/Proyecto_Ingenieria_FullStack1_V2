@@ -18,8 +18,29 @@ spring:
   kafka:
     # Centralizamos Kafka aquí para que Service-Log y otros lo hereden de una vez
     bootstrap-servers: kafka:29092
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  datasource:
+    hikari:
+      data-source-properties:
+        useSSL: false
+        serverTimezone: UTC
+        allowPublicKeyRetrieval: true
+        createDatabaseIfNotExist: true
 
 logging:
   level:
     root: INFO
     com.logistica: DEBUG # Muestra tus controladores y servicios de todos los MS de forma segura
+
+server:
+  forward-headers-strategy: framework
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    disable-swagger-default-url: true
+  override-with-generic-response: false
