@@ -86,7 +86,7 @@ for SERVICE in $SERVICES; do
 
     if [ -d "$SERVICE" ]; then
         cd "$SERVICE" || exit
-        if mvn test -Dtest='!*ApplicationTests' -DfailIfNoTests=false; then
+        if mvn test -Dtest='!*ApplicationTests' -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false; then
             printf "${GREEN}✅ Tests OK en $SERVICE [${CONTADOR_ACTUAL}/${TOTAL_SERVICIOS}]${NC}\n"
             OK_SERVICES="$OK_SERVICES $SERVICE"
         else
